@@ -1,0 +1,266 @@
+const chatForm = document.querySelector('#chat-form');
+const chatLog = document.querySelector('#chat-log');
+const loginScreen = document.querySelector('.login-screen');
+
+function applyTheme(theme, selectedTheme = theme) {
+    const target = document.body;
+    target.classList.remove('theme-light', 'theme-dark');
+    if (theme === 'light') target.classList.add('theme-light');
+    if (theme === 'dark') target.classList.add('theme-dark');
+    document.querySelectorAll('[data-theme-choice]').forEach((button) => {
+        button.classList.toggle('active', button.dataset.themeChoice === selectedTheme);
+    });
+}
+
+const savedTheme = localStorage.getItem('diarq-theme') || localStorage.getItem('diarq-login-theme') || 'system';
+const systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+applyTheme(savedTheme === 'system' ? (systemDark ? 'dark' : 'light') : savedTheme, savedTheme);
+
+function bindThemeChoices() {
+    document.querySelectorAll('[data-theme-choice]').forEach((button) => {
+        if (button.dataset.themeBound === '1') return;
+        button.dataset.themeBound = '1';
+        button.addEventListener('click', () => {
+            const theme = button.dataset.themeChoice;
+            localStorage.setItem('diarq-theme', theme);
+            localStorage.setItem('diarq-login-theme', theme);
+            if (theme === 'system') {
+                const systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                applyTheme(systemDark ? 'dark' : 'light', 'system');
+            } else {
+                applyTheme(theme, theme);
+            }
+        });
+    });
+}
+
+bindThemeChoices();
+
+const moreTrigger = document.querySelector('.more-trigger');
+const moreMenu = document.querySelector('.more-menu');
+const loginMore = document.querySelector('.login-more');
+const passwordToggle = document.querySelector('.password-toggle');
+const sidebar = document.querySelector('.sidebar');
+const appShell = document.querySelector('.app-shell');
+const sidebarToggle = document.querySelector('.sidebar-toggle');
+
+if (loginMore) {
+    Object.assign(loginMore.style, {
+        position: 'fixed',
+        top: '12px',
+        right: '18px',
+        zIndex: '9999'
+    });
+}
+
+if (sidebar && appShell && sidebarToggle) {
+    const collapsed = localStorage.getItem('diarq-sidebar-collapsed') === '1';
+    sidebar.classList.toggle('is-collapsed', collapsed);
+    appShell.classList.toggle('sidebar-collapsed', collapsed);
+    sidebarToggle.setAttribute('aria-label', collapsed ? 'Expandir sidebar' : 'Recolher sidebar');
+
+    sidebarToggle.addEventListener('click', () => {
+        const next = !sidebar.classList.contains('is-collapsed');
+        sidebar.classList.toggle('is-collapsed', next);
+        appShell.classList.toggle('sidebar-collapsed', next);
+        localStorage.setItem('diarq-sidebar-collapsed', next ? '1' : '0');
+        sidebarToggle.setAttribute('aria-label', next ? 'Expandir sidebar' : 'Recolher sidebar');
+    });
+}
+
+function closeMoreMenu() {
+    if (!moreMenu || !moreTrigger) return;
+    moreMenu.hidden = true;
+    moreTrigger.setAttribute('aria-expanded', 'false');
+}
+
+function openMoreMenu() {
+    if (!moreMenu || !moreTrigger) return;
+    moreMenu.hidden = false;
+    moreTrigger.setAttribute('aria-expanded', 'true');
+}
+
+if (moreTrigger && moreMenu) {
+    moreTrigger.addEventListener('click', (event) => {
+        event.stopPropagation();
+        moreMenu.hidden ? openMoreMenu() : closeMoreMenu();
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!moreMenu.contains(event.target) && event.target !== moreTrigger) closeMoreMenu();
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeMoreMenu();
+        if (moreMenu.hidden) return;
+        if (event.key.toLowerCase() === 'r') window.location.reload();
+        if (event.key.toLowerCase() === 'c') clearLoginCache();
+    });
+
+    document.querySelector('[data-menu-action="rerun"]')?.addEventListener('click', () => {
+        window.location.reload();
+    });
+
+    document.querySelector('[data-menu-action="clear-cache"]')?.addEventListener('click', clearLoginCache);
+}
+
+if (passwordToggle) {
+    passwordToggle.addEventListener('click', () => {
+        const input = passwordToggle.closest('.password-field')?.querySelector('input');
+        if (!input) return;
+        const visible = input.type === 'text';
+        input.type = visible ? 'password' : 'text';
+        passwordToggle.setAttribute('aria-label', visible ? 'Mostrar senha' : 'Ocultar senha');
+        passwordToggle.classList.toggle('is-visible', !visible);
+    });
+}
+
+document.querySelectorAll('.temp-code-link').forEach((button) => {
+    button.addEventListener('click', () => {
+        const input = button.closest('label')?.querySelector('input[name="TEMPORALIDADE"]');
+        if (!input) return;
+        input.value = button.dataset.tempCode || '';
+        input.focus();
+    });
+});
+
+const manualItems = document.querySelector('[data-manual-items]');
+const addManualItem = document.querySelector('[data-add-manual-item]');
+
+function renumberManualItems() {
+    if (!manualItems) return;
+    const items = manualItems.querySelectorAll('[data-manual-item]');
+    items.forEach((item, index) => {
+        const title = item.querySelector('.manual-item-title strong');
+        const remove = item.querySelector('[data-remove-manual-item]');
+        if (title) title.textContent = `Item #${index + 1}`;
+        if (remove) remove.hidden = items.length === 1;
+    });
+}
+
+if (manualItems && addManualItem) {
+    addManualItem.addEventListener('click', () => {
+        const first = manualItems.querySelector('[data-manual-item]');
+        if (!first) return;
+        const clone = first.cloneNode(true);
+        clone.querySelectorAll('input').forEach((input) => {
+            input.value = '';
+            input.setAttribute('autocomplete', 'off');
+        });
+        manualItems.appendChild(clone);
+        renumberManualItems();
+        clone.querySelector('input')?.focus();
+    });
+
+    manualItems.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-remove-manual-item]');
+        if (!button) return;
+        const item = button.closest('[data-manual-item]');
+        if (item && manualItems.querySelectorAll('[data-manual-item]').length > 1) {
+            item.remove();
+            renumberManualItems();
+        }
+    });
+
+    renumberManualItems();
+}
+
+const bulkForm = document.querySelector('[data-bulk-form]');
+if (bulkForm) {
+    const selectAll = bulkForm.querySelector('[data-select-all]');
+    const rowChecks = Array.from(bulkForm.querySelectorAll('[data-row-check]'));
+
+    function refreshSelectAll() {
+        if (!selectAll) return;
+        const checked = rowChecks.filter((check) => check.checked).length;
+        selectAll.checked = checked > 0 && checked === rowChecks.length;
+        selectAll.indeterminate = checked > 0 && checked < rowChecks.length;
+    }
+
+    selectAll?.addEventListener('change', () => {
+        rowChecks.forEach((check) => {
+            check.checked = selectAll.checked;
+        });
+        refreshSelectAll();
+    });
+
+    rowChecks.forEach((check) => check.addEventListener('change', refreshSelectAll));
+    refreshSelectAll();
+}
+
+function clearLoginCache() {
+    sessionStorage.clear();
+    const theme = localStorage.getItem('diarq-theme') || localStorage.getItem('diarq-login-theme');
+    localStorage.clear();
+    if (theme) {
+        localStorage.setItem('diarq-theme', theme);
+        localStorage.setItem('diarq-login-theme', theme);
+    }
+    document.cookie.split(';').forEach((cookie) => {
+        const name = cookie.split('=')[0].trim();
+        if (name) document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+    });
+    window.location.reload();
+}
+
+function addChat(role, text) {
+    if (!chatLog) return;
+    const div = document.createElement('div');
+    div.className = `chat-msg ${role}`;
+    const who = document.createElement('strong');
+    who.textContent = role === 'user' ? 'Você' : 'Assistente DIARQ';
+    const body = document.createElement('span');
+    body.textContent = text;
+    div.append(who, body);
+    chatLog.appendChild(div);
+    chatLog.scrollTop = chatLog.scrollHeight;
+    return div;
+}
+
+if (chatForm) {
+    const input = chatForm.querySelector('input[name="message"]');
+    const submit = chatForm.querySelector('button[type="submit"], button:not([type])');
+    const initialMessage = chatLog?.innerHTML || '';
+
+    document.querySelectorAll('[data-chat-prompt]').forEach((button) => {
+        button.addEventListener('click', () => {
+            if (!input) return;
+            input.value = button.dataset.chatPrompt || '';
+            input.focus();
+        });
+    });
+
+    document.querySelector('[data-clear-chat]')?.addEventListener('click', () => {
+        if (!chatLog) return;
+        chatLog.innerHTML = initialMessage;
+        input?.focus();
+    });
+
+    chatForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const message = input.value.trim();
+        if (!message) return;
+        input.value = '';
+        addChat('user', message);
+        input.disabled = true;
+        if (submit) submit.disabled = true;
+        const typing = addChat('assistant typing', 'Pensando...');
+        try {
+            const response = await fetch('/api/assistant.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message})
+            });
+            const data = await response.json();
+            typing?.remove();
+            addChat('assistant', data.reply || 'Sem resposta.');
+        } catch (error) {
+            typing?.remove();
+            addChat('assistant', 'Não consegui consultar o assistente agora. Verifique a conexão e tente novamente.');
+        } finally {
+            input.disabled = false;
+            if (submit) submit.disabled = false;
+            input.focus();
+        }
+    });
+}
