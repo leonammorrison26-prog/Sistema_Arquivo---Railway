@@ -1,0 +1,13 @@
+{
+  "name": "diarq/sistema-arquivo",
+  "description": "Sistema de gestao de acervos DIARQ para Railway",
+  "type": "project",
+  "require": {
+    "php": ">=8.1",
+    "ext-curl": "*",
+    "ext-pdo": "*",
+    "ext-pdo_sqlite": "*",
+    "phpoffice/phpspreadsheet": "^2.1",
+    "setasign/fpdf": "^1.8"
+  }
+}
