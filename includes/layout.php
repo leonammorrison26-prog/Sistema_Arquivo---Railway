@@ -132,27 +132,46 @@ function side_icon(string $icon): string
     }
 
     $icons = [
-        'user' => '&#128100;',
+        'user' => app_icon('person'),
         'home' => '&#127968;',
         'tools' => '&#128736;',
         'archive' => '&#128229;',
-        'box' => '&#128230;',
+        'box' => app_icon('boxes'),
         'upload' => '&#128228;',
-        'doc' => '&#128196;',
+        'doc' => app_icon('processos'),
         'tag' => '&#127991;',
         'note' => '&#128221;',
         'plus' => '&#10133;',
         'chart' => '&#128202;',
+        'dashboard' => app_icon('dashboard'),
         'table' => '&#128203;',
         'assistant' => '&#129302;',
         'folder' => '&#128193;',
         'rocket' => '&#128640;',
+        'download' => app_icon('download'),
         'diagnostic' => '&#128736;',
         'logout' => '&#128682;',
     ];
 
     $content = $icons[$icon] ?? '';
     return '<span class="side-icon icon-' . h($icon) . '" aria-hidden="true">' . $content . '</span>';
+}
+
+function app_icon(string $icon): string
+{
+    $attrs = 'width="16" height="16" fill="currentColor" aria-hidden="true" focusable="false"';
+    return match ($icon) {
+        'trash' => '<svg xmlns="http://www.w3.org/2000/svg" ' . $attrs . ' class="bi bi-trash3 app-svg-icon" viewBox="0 0 16 16"><path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5"/></svg>',
+        'send' => '<svg xmlns="http://www.w3.org/2000/svg" ' . $attrs . ' class="bi bi-send app-svg-icon" viewBox="0 0 16 16"><path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576zm6.787-8.201L1.591 6.602l4.339 2.76z"/></svg>',
+        'search' => '<svg xmlns="http://www.w3.org/2000/svg" ' . $attrs . ' class="bi bi-search app-svg-icon" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/></svg>',
+        'person' => '<svg xmlns="http://www.w3.org/2000/svg" ' . $attrs . ' class="bi bi-person-circle app-svg-icon" viewBox="0 0 16 16"><path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/><path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1"/></svg>',
+        'rh' => '<svg xmlns="http://www.w3.org/2000/svg" ' . $attrs . ' class="bi bi-file-earmark-person-fill app-svg-icon" viewBox="0 0 16 16"><path d="M9.293 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.707A1 1 0 0 0 13.707 4L10 .293A1 1 0 0 0 9.293 0M9.5 3.5v-2l3 3h-2a1 1 0 0 1-1-1M11 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0m2 5.755V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-.245S4 12 8 12s5 1.755 5 1.755"/></svg>',
+        'processos' => '<svg xmlns="http://www.w3.org/2000/svg" ' . $attrs . ' class="bi bi-file-earmark-ppt-fill app-svg-icon" viewBox="0 0 16 16"><path d="M8.188 10H7V6.5h1.188a1.75 1.75 0 1 1 0 3.5"/><path d="M4 0h5.293A1 1 0 0 1 10 .293L13.707 4a1 1 0 0 1 .293.707V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2m5.5 1.5v2a1 1 0 0 0 1 1h2zM7 5.5a1 1 0 0 0-1 1V13a.5.5 0 0 0 1 0v-2h1.188a2.75 2.75 0 0 0 0-5.5z"/></svg>',
+        'boxes' => '<svg xmlns="http://www.w3.org/2000/svg" ' . $attrs . ' class="bi bi-boxes app-svg-icon" viewBox="0 0 16 16"><path d="M7.752.066a.5.5 0 0 1 .496 0l3.75 2.143a.5.5 0 0 1 .252.434v3.995l3.498 2A.5.5 0 0 1 16 9.07v4.286a.5.5 0 0 1-.252.434l-3.75 2.143a.5.5 0 0 1-.496 0l-3.502-2-3.502 2.001a.5.5 0 0 1-.496 0l-3.75-2.143A.5.5 0 0 1 0 13.357V9.071a.5.5 0 0 1 .252-.434L3.75 6.638V2.643a.5.5 0 0 1 .252-.434zM4.25 7.504 1.508 9.071l2.742 1.567 2.742-1.567zM7.5 9.933l-2.75 1.571v3.134l2.75-1.571zm1 3.134 2.75 1.571v-3.134L8.5 9.933zm.508-3.996 2.742 1.567 2.742-1.567-2.742-1.567zm2.242-2.433V3.504L8.5 5.076V8.21zM7.5 8.21V5.076L4.75 3.504v3.134zM5.258 2.643 8 4.21l2.742-1.567L8 1.076zM15 9.933l-2.75 1.571v3.134L15 13.067zM3.75 14.638v-3.134L1 9.933v3.134z"/></svg>',
+        'dashboard' => '<svg xmlns="http://www.w3.org/2000/svg" ' . $attrs . ' class="bi bi-graph-down-arrow app-svg-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 0h1v15h15v1H0zm10 11.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 0-1 0v2.6l-3.613-4.417a.5.5 0 0 0-.74-.037L7.06 8.233 3.404 3.206a.5.5 0 0 0-.808.588l4 5.5a.5.5 0 0 0 .758.06l2.609-2.61L13.445 11H10.5a.5.5 0 0 0-.5.5"/></svg>',
+        'download' => '<svg xmlns="http://www.w3.org/2000/svg" ' . $attrs . ' class="bi bi-download app-svg-icon" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>',
+        default => '',
+    };
 }
 
 function diarq_network_configured(): bool
@@ -230,15 +249,15 @@ function render_sidebar(): void
             </a>
             <?php sidebar_external('diarq://', 'Abrir Pasta Compart - Diarq', 'folder'); ?>
             <?php if (!diarq_network_configured()): ?>
-                <a class="side-button" href="/configurar_diarq.bat" download title="Configurar Acesso à Rede"><?= side_icon('rocket') ?><span class="side-label">Configurar Acesso à Rede (Rodar uma vez)</span></a>
+                <a class="side-button" href="/configurar_diarq.bat" download title="Configurar Acesso à Rede"><?= side_icon('download') ?><span class="side-label">Configurar Acesso à Rede (Rodar uma vez)</span></a>
             <?php endif; ?>
 
             <details class="nav-group">
                 <?php sidebar_summary('Gerar Relatórios', 'chart'); ?>
                 <div class="nav-submenu">
-                    <a class="side-button sub-button" href="/?export=acervo" title="Relatório Geral do Acervo"><?= side_icon('table') ?><span class="side-label">Relatório Geral do Acervo</span></a>
+                    <a class="side-button sub-button" href="/?export=acervo" title="Relatório Geral do Acervo"><?= side_icon('download') ?><span class="side-label">Relatório Geral do Acervo</span></a>
                     <?php sidebar_link('rel_indicadores', 'Relatório Indicadores', 'chart'); ?>
-                    <?php sidebar_link('dashboard', 'Dashboard', 'chart'); ?>
+                    <?php sidebar_link('dashboard', 'Dashboard', 'dashboard'); ?>
                 </div>
             </details>
 

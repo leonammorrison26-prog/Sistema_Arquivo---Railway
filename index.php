@@ -34,10 +34,10 @@ render_footer();
 function render_busca(): void
 {
     $tabs = [
-        'geral' => 'Geral',
-        'rh' => 'RH / Prontuarios',
-        'caixas' => 'Caixas',
-        'processos' => 'Processos',
+        'geral' => ['label' => 'Geral', 'icon' => 'search'],
+        'rh' => ['label' => 'RH / Prontuarios', 'icon' => 'rh'],
+        'caixas' => ['label' => 'Caixas', 'icon' => 'boxes'],
+        'processos' => ['label' => 'Processos', 'icon' => 'processos'],
     ];
     $scope = $_GET['scope'] ?? 'geral';
     $placeholders = [
@@ -51,15 +51,15 @@ function render_busca(): void
     ?>
     <section class="panel">
         <nav class="tabs">
-            <?php foreach ($tabs as $key => $label): ?>
-                <a class="<?= $scope === $key ? 'active' : '' ?>" href="/?page=busca&scope=<?= h($key) ?>"><?= h($label) ?></a>
+            <?php foreach ($tabs as $key => $tab): ?>
+                <a class="<?= $scope === $key ? 'active' : '' ?>" href="/?page=busca&scope=<?= h($key) ?>"><?= app_icon($tab['icon']) ?><?= h($tab['label']) ?></a>
             <?php endforeach; ?>
         </nav>
         <form class="search-bar" method="get">
             <input type="hidden" name="page" value="busca">
             <input type="hidden" name="scope" value="<?= h($scope) ?>">
             <input name="q" value="<?= h($term) ?>" placeholder="<?= h($placeholders[$scope] ?? $placeholders['geral']) ?>">
-            <button type="submit">Buscar</button>
+            <button type="submit"><?= app_icon('send') ?>Buscar</button>
             <?php if ($term !== ''): ?><a class="icon-button" href="/?page=busca&scope=<?= h($scope) ?>">Nova</a><?php endif; ?>
         </form>
     </section>
@@ -353,9 +353,9 @@ function render_planilha(): void
                 <input name="q" value="<?= h($term) ?>" placeholder="Caixa, processo, interessado, assunto...">
             </label>
             <div class="cadastros-filter-actions">
-                <button class="primary" type="submit">Filtrar</button>
+                <button class="primary" type="submit"><?= app_icon('send') ?>Filtrar</button>
                 <a class="button" href="/?page=planilha">Limpar</a>
-                <a class="button export-button" href="/?<?= h(http_build_query($exportQuery)) ?>">Baixar Excel</a>
+                <a class="button export-button" href="/?<?= h(http_build_query($exportQuery)) ?>"><?= app_icon('download') ?>Baixar Excel</a>
             </div>
         </form>
 
@@ -366,7 +366,7 @@ function render_planilha(): void
             <?php else: ?>
                 <div class="cadastros-table-head">
                     <span>Mostrando <?= h((string) ($offset + 1)) ?>-<?= h((string) min($offset + $perPage, $total)) ?> de <?= h((string) $total) ?></span>
-                    <button class="danger small" type="submit">Excluir selecionados</button>
+                    <button class="danger small" type="submit"><?= app_icon('trash') ?>Excluir selecionados</button>
                 </div>
                 <div class="table-wrap cadastros-table-wrap">
                     <table class="cadastros-table">
@@ -396,7 +396,7 @@ function render_planilha(): void
                                 <td><?= h($row['LOCALIZACAO']) ?></td>
                                 <td><?= h($row['RESPONSAVEL']) ?></td>
                                 <td><?= h($row['DATA_LIMITE']) ?></td>
-                                <td><button class="danger small" type="submit" name="delete_one" value="<?= h($row['ID_UNICO']) ?>">Excluir</button></td>
+                                <td><button class="danger small" type="submit" name="delete_one" value="<?= h($row['ID_UNICO']) ?>"><?= app_icon('trash') ?>Excluir</button></td>
                             </tr>
                         <?php endforeach; ?>
                         </tbody>
@@ -517,7 +517,7 @@ function render_usuarios(): void
                                     <form method="post" onsubmit="return confirm('Excluir usuario?')">
                                         <input type="hidden" name="action" value="delete_user">
                                         <input type="hidden" name="id" value="<?= (int) $user['id'] ?>">
-                                        <button class="danger small">Excluir</button>
+                                        <button class="danger small"><?= app_icon('trash') ?>Excluir</button>
                                     </form>
                                 <?php else: ?>
                                     <span class="admin-lock">Protegido</span>
@@ -710,7 +710,7 @@ function render_dashboard(): void
                 <p>Visão rápida do acervo, qualidade dos cadastros, movimentações e pontos que precisam de atenção.</p>
             </div>
             <div class="dashboard-actions">
-                <a class="button" href="/?export=acervo">Baixar acervo</a>
+                <a class="button" href="/?export=acervo"><?= app_icon('download') ?>Baixar acervo</a>
                 <a class="button" href="/?page=planilha">Gestão de cadastros</a>
                 <a class="button primary" href="/?page=assistente_openai">Perguntar ao assistente</a>
             </div>
@@ -832,7 +832,7 @@ function render_rel_temporalidade(): void
     <section class="panel">
         <div class="toolbar">
             <h2>Relatorio: Itens com Temporalidade Pendente</h2>
-            <a class="button" href="/?export=pendentes">Exportar Excel</a>
+            <a class="button" href="/?export=pendentes"><?= app_icon('download') ?>Exportar Excel</a>
         </div>
         <?php if (!$rows): ?>
             <div class="alert success">Nenhum item com temporalidade pendente encontrado.</div>
