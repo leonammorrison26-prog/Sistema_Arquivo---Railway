@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/supabase.php';
+require_once __DIR__ . '/import.php';
 
 function login_user(string $login, string $senha): bool
 {
@@ -37,10 +38,18 @@ function sync_after_login(): void
 
     try {
         $result = supabase_sync_on_login();
+        $import = import_planilhas_on_login();
         if (($result['enabled'] ?? false) === true) {
             $_SESSION['flash_success'] = 'Sincronizacao Supabase concluida: '
                 . (int) ($result['acervo'] ?? 0) . ' item(ns) do acervo e '
                 . (int) ($result['usuarios'] ?? 0) . ' usuario(s).';
+            if (($import['enabled'] ?? false) === true) {
+                $_SESSION['flash_success'] .= ' Planilhas: '
+                    . (int) ($import['imported'] ?? 0) . ' linha(s) processada(s) em '
+                    . (int) ($import['files'] ?? 0) . ' arquivo(s).';
+            } elseif (($import['reason'] ?? '') !== '') {
+                $_SESSION['flash_success'] .= ' Planilhas nao importadas: ' . $import['reason'];
+            }
         }
     } catch (Throwable $e) {
         $_SESSION['flash_error'] = 'Login realizado, mas a sincronizacao com o Supabase falhou: ' . $e->getMessage();
