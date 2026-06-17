@@ -11,6 +11,9 @@ function login_user(string $login, string $senha): bool
     $supabaseUser = supabase_fetch_user(trim($login), $senha);
     if ($supabaseUser) {
         $user = normalize_remote_user($supabaseUser);
+        if (is_default_password($user['senha'] ?? '')) {
+            $user['TROCAR_SENHA'] = 1;
+        }
         mirror_user_local($user);
         $_SESSION['user'] = $user;
         sync_after_login();
@@ -25,9 +28,74 @@ function login_user(string $login, string $senha): bool
         return false;
     }
 
+    if (is_default_password($user['senha'] ?? '')) {
+        $user['TROCAR_SENHA'] = 1;
+        db()->prepare('UPDATE usuarios SET TROCAR_SENHA = 1 WHERE id = :id')->execute([':id' => $user['id']]);
+    }
+
     $_SESSION['user'] = $user;
     sync_after_login();
     return true;
+}
+
+function is_default_password(string $senha): bool
+{
+    return hash_equals('123456', $senha);
+}
+
+function password_change_required(?array $user = null): bool
+{
+    $user ??= $_SESSION['user'] ?? null;
+    if (!$user) {
+        return false;
+    }
+
+    return (int) ($user['TROCAR_SENHA'] ?? 0) === 1 || is_default_password((string) ($user['senha'] ?? ''));
+}
+
+function change_logged_user_password(string $currentPassword, string $newPassword, string $confirmPassword): void
+{
+    $user = $_SESSION['user'] ?? null;
+    if (!$user) {
+        throw new RuntimeException('Sessao expirada. Faca login novamente.');
+    }
+
+    $currentPassword = trim($currentPassword);
+    $newPassword = trim($newPassword);
+    $confirmPassword = trim($confirmPassword);
+
+    if (!hash_equals((string) ($user['senha'] ?? ''), $currentPassword)) {
+        throw new RuntimeException('Senha atual incorreta.');
+    }
+
+    if (strlen($newPassword) < 6) {
+        throw new RuntimeException('A nova senha deve ter pelo menos 6 caracteres.');
+    }
+
+    if ($newPassword !== $confirmPassword) {
+        throw new RuntimeException('A confirmacao da nova senha nao confere.');
+    }
+
+    if (is_default_password($newPassword)) {
+        throw new RuntimeException('Escolha uma senha diferente da senha padrao 123456.');
+    }
+
+    if (hash_equals($currentPassword, $newPassword)) {
+        throw new RuntimeException('A nova senha precisa ser diferente da senha atual.');
+    }
+
+    $login = trim((string) ($user['login'] ?? ''));
+    if ($login === '') {
+        throw new RuntimeException('Usuario sem login definido.');
+    }
+
+    supabase_update_user_password($login, $newPassword);
+
+    db()->prepare('UPDATE usuarios SET senha = :senha, TROCAR_SENHA = 0 WHERE login = :login COLLATE NOCASE')
+        ->execute([':senha' => $newPassword, ':login' => $login]);
+
+    $_SESSION['user']['senha'] = $newPassword;
+    $_SESSION['user']['TROCAR_SENHA'] = 0;
 }
 
 function sync_after_login(): void
@@ -137,6 +205,50 @@ function require_login(): void
         render_login();
         exit;
     }
+}
+
+function render_password_change(): void
+{
+    $erro = $_SESSION['flash_error'] ?? null;
+    $success = $_SESSION['flash_success'] ?? null;
+    unset($_SESSION['flash_error'], $_SESSION['flash_success']);
+    $user = $_SESSION['user'] ?? [];
+    ?>
+    <section class="login-card password-change-card">
+        <div class="section-heading">
+            <div>
+                <span class="eyebrow">Seguranca da conta</span>
+                <h2>Troque sua senha para continuar</h2>
+                <p class="muted">A senha padrao 123456 so pode ser usada no primeiro acesso.</p>
+            </div>
+        </div>
+        <?php if ($erro): ?><div class="alert danger"><?= h($erro) ?></div><?php endif; ?>
+        <?php if ($success): ?><div class="alert success"><?= h($success) ?></div><?php endif; ?>
+        <form method="post" class="stack">
+            <input type="hidden" name="action" value="change_password">
+            <label>Usuario <input value="<?= h($user['login'] ?? '') ?>" readonly></label>
+            <label>Senha atual
+                <span class="password-field">
+                    <input name="senha_atual" type="password" placeholder="Digite sua senha atual" required autofocus>
+                    <button class="password-toggle" type="button" aria-label="Mostrar senha">●</button>
+                </span>
+            </label>
+            <label>Nova senha
+                <span class="password-field">
+                    <input name="nova_senha" type="password" placeholder="Digite sua nova senha" minlength="6" required>
+                    <button class="password-toggle" type="button" aria-label="Mostrar senha">●</button>
+                </span>
+            </label>
+            <label>Confirmar nova senha
+                <span class="password-field">
+                    <input name="confirmar_senha" type="password" placeholder="Repita a nova senha" minlength="6" required>
+                    <button class="password-toggle" type="button" aria-label="Mostrar senha">●</button>
+                </span>
+            </label>
+            <button class="primary" type="submit">Salvar nova senha</button>
+        </form>
+    </section>
+    <?php
 }
 
 function logout_user(): never

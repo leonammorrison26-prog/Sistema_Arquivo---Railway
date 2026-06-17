@@ -13,9 +13,14 @@ handle_actions();
 require_login();
 
 $page = current_page();
+if (password_change_required() && $page !== 'trocar_senha') {
+    redirect_to('trocar_senha');
+}
+
 render_header();
 
 match ($page) {
+    'trocar_senha' => render_password_change(),
     'cad_caixa' => render_cad_caixa(),
     'cad_processo' => render_cad_processo(),
     'planilha' => render_planilha(),

@@ -1721,6 +1721,21 @@ th { color: white; background: rgba(255,255,255,.05); }
     border-color: rgba(148, 163, 184, 0.58);
 }
 .login-card .alert { color: #fff; }
+.password-change-card {
+    width: min(520px, 100%);
+    margin: 0 auto;
+}
+.password-change-card h2 {
+    margin: 4px 0 8px;
+    color: #fff;
+    font-size: clamp(1.35rem, 3vw, 1.8rem);
+}
+.password-change-card .section-heading {
+    margin-bottom: 18px;
+}
+.password-change-card input[readonly] {
+    opacity: .8;
+}
 .stack { display: grid; gap: 22px; margin-top: 0; }
 .password-field {
     display: grid;

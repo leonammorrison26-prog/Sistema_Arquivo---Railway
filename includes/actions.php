@@ -15,6 +15,12 @@ function handle_actions(): void
         return;
     }
 
+    $action = $_POST['action'] ?? '';
+    if (password_change_required() && $action !== 'change_password' && current_page() !== 'trocar_senha') {
+        $_SESSION['flash_error'] = 'Troque sua senha para continuar usando o sistema.';
+        redirect_to('trocar_senha');
+    }
+
     if (($_GET['export'] ?? '') === 'acervo') {
         require_once __DIR__ . '/export.php';
         if (($_GET['cadastros'] ?? '') === '1') {
@@ -40,9 +46,22 @@ function handle_actions(): void
         return;
     }
 
-    $action = $_POST['action'] ?? '';
-
     try {
+        if ($action === 'change_password') {
+            change_logged_user_password(
+                $_POST['senha_atual'] ?? '',
+                $_POST['nova_senha'] ?? '',
+                $_POST['confirmar_senha'] ?? ''
+            );
+            $_SESSION['flash_success'] = 'Senha alterada com sucesso.';
+            redirect_to('busca');
+        }
+
+        if (password_change_required()) {
+            $_SESSION['flash_error'] = 'Troque sua senha para continuar usando o sistema.';
+            redirect_to('trocar_senha');
+        }
+
         if ($action === 'pdf_etiqueta') {
             require_once __DIR__ . '/pdf.php';
             output_etiqueta_pdf($_POST);

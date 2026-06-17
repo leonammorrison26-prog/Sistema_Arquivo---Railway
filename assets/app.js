@@ -39,7 +39,6 @@ bindThemeChoices();
 const moreTrigger = document.querySelector('.more-trigger');
 const moreMenu = document.querySelector('.more-menu');
 const loginMore = document.querySelector('.login-more');
-const passwordToggle = document.querySelector('.password-toggle');
 const sidebar = document.querySelector('.sidebar');
 const appShell = document.querySelector('.app-shell');
 const sidebarToggle = document.querySelector('.sidebar-toggle');
@@ -152,7 +151,7 @@ if (moreTrigger && moreMenu) {
     document.querySelector('[data-menu-action="clear-cache"]')?.addEventListener('click', clearLoginCache);
 }
 
-if (passwordToggle) {
+document.querySelectorAll('.password-toggle').forEach((passwordToggle) => {
     passwordToggle.addEventListener('click', () => {
         const input = passwordToggle.closest('.password-field')?.querySelector('input');
         if (!input) return;
@@ -161,7 +160,7 @@ if (passwordToggle) {
         passwordToggle.setAttribute('aria-label', visible ? 'Mostrar senha' : 'Ocultar senha');
         passwordToggle.classList.toggle('is-visible', !visible);
     });
-}
+});
 
 document.querySelectorAll('.temp-code-link').forEach((button) => {
     button.addEventListener('click', () => {
