@@ -3,9 +3,45 @@
 declare(strict_types=1);
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Reader\IReadFilter;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 require_once __DIR__ . '/functions.php';
+
+$autoload = BASE_DIR . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
+if (is_file($autoload)) {
+    require_once $autoload;
+}
+
+if (interface_exists(IReadFilter::class)) {
+    final class PlanilhaRowReadFilter implements IReadFilter
+    {
+        /**
+         * @param array<int, array{0:int, 1:int}> $rowRanges
+         */
+        public function __construct(
+            private readonly array $rowRanges,
+            private readonly int $maxColumn
+        ) {
+        }
+
+        public function readCell(string $columnAddress, int $row, string $worksheetName = ''): bool
+        {
+            if (Coordinate::columnIndexFromString($columnAddress) > $this->maxColumn) {
+                return false;
+            }
+
+            foreach ($this->rowRanges as [$start, $end]) {
+                if ($row >= $start && $row <= $end) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+}
 
 function import_planilhas_on_login(bool $force = false): array
 {
@@ -37,14 +73,35 @@ function import_planilhas_on_login(bool $force = false): array
     }
 
     $imported = 0;
+    $completed = true;
+    $deadline = microtime(true) + 12;
     foreach ($files as $file) {
-        $imported += import_planilha_file($file);
+        if (microtime(true) >= $deadline) {
+            $completed = false;
+            break;
+        }
+
+        $result = import_planilha_file($file, $deadline);
+        $imported += (int) ($result['imported'] ?? 0);
+        if (($result['completed'] ?? false) !== true) {
+            $completed = false;
+            break;
+        }
     }
 
-    import_meta_set('planilhas_fingerprint', $fingerprint);
+    if ($completed) {
+        import_meta_set('planilhas_fingerprint', $fingerprint);
+    }
     import_meta_set('planilhas_last_import', date('c'));
 
-    return ['enabled' => true, 'imported' => $imported, 'files' => count($files), 'skipped' => false];
+    return [
+        'enabled' => true,
+        'imported' => $imported,
+        'files' => count($files),
+        'skipped' => false,
+        'completed' => $completed,
+        'reason' => $completed ? '' : 'Importacao parcial para evitar tempo limite; sera retomada no proximo login.',
+    ];
 }
 
 function planilha_import_files(): array
@@ -64,19 +121,86 @@ function planilhas_fingerprint(array $files): string
     return hash('sha256', implode('|', $parts));
 }
 
-function import_planilha_file(string $file): int
+function import_planilha_file(string $file, ?float $deadline = null): array
 {
     $reader = IOFactory::createReaderForFile($file);
     $reader->setReadDataOnly(true);
-    $spreadsheet = $reader->load($file);
     $imported = 0;
 
-    foreach ($spreadsheet->getWorksheetIterator() as $sheet) {
-        $imported += import_planilha_sheet($file, $sheet);
+    foreach ($reader->listWorksheetInfo($file) as $sheetInfo) {
+        if ($deadline !== null && microtime(true) >= $deadline) {
+            return ['imported' => $imported, 'completed' => false];
+        }
+
+        $result = import_planilha_sheet_info($file, $sheetInfo, $deadline);
+        $imported += (int) ($result['imported'] ?? 0);
+        if (($result['completed'] ?? false) !== true) {
+            return ['imported' => $imported, 'completed' => false];
+        }
     }
 
-    $spreadsheet->disconnectWorksheets();
-    return $imported;
+    return ['imported' => $imported, 'completed' => true];
+}
+
+function import_planilha_sheet_info(string $file, array $sheetInfo, ?float $deadline = null): array
+{
+    $sheetName = (string) ($sheetInfo['worksheetName'] ?? '');
+    $highestRow = min((int) ($sheetInfo['totalRows'] ?? 0), 100000);
+    $maxColumn = max(1, min((int) ($sheetInfo['totalColumns'] ?? 1), 80));
+    if ($sheetName === '' || $highestRow < 1) {
+        return ['imported' => 0, 'completed' => true];
+    }
+
+    $headerReader = IOFactory::createReaderForFile($file);
+    $headerReader->setReadDataOnly(true);
+    $headerReader->setLoadSheetsOnly([$sheetName]);
+    $headerReader->setReadFilter(new PlanilhaRowReadFilter([[1, min(30, $highestRow)]], $maxColumn));
+
+    $headerSpreadsheet = $headerReader->load($file);
+    $headerSheet = $headerSpreadsheet->getSheet(0);
+    $headerRow = find_planilha_header_row($headerSheet);
+    if ($headerRow === null) {
+        $headerSpreadsheet->disconnectWorksheets();
+        return ['imported' => 0, 'completed' => true];
+    }
+
+    $highestColumn = Coordinate::stringFromColumnIndex($maxColumn);
+    $headers = $headerSheet->rangeToArray("A{$headerRow}:{$highestColumn}{$headerRow}", null, true, true, false)[0] ?? [];
+    $fieldMap = map_planilha_headers($headers);
+    $headerSpreadsheet->disconnectWorksheets();
+    if (!$fieldMap) {
+        return ['imported' => 0, 'completed' => true];
+    }
+
+    $imported = 0;
+    $chunkSize = 1000;
+    for ($startRow = $headerRow + 1; $startRow <= $highestRow; $startRow += $chunkSize) {
+        if ($deadline !== null && microtime(true) >= $deadline) {
+            return ['imported' => $imported, 'completed' => false];
+        }
+
+        $endRow = min($highestRow, $startRow + $chunkSize - 1);
+        $reader = IOFactory::createReaderForFile($file);
+        $reader->setReadDataOnly(true);
+        $reader->setLoadSheetsOnly([$sheetName]);
+        $reader->setReadFilter(new PlanilhaRowReadFilter([[$startRow, $endRow]], $maxColumn));
+
+        $spreadsheet = $reader->load($file);
+        $sheet = $spreadsheet->getSheet(0);
+        for ($rowNumber = $startRow; $rowNumber <= $endRow; $rowNumber++) {
+            $values = $sheet->rangeToArray("A{$rowNumber}:{$highestColumn}{$rowNumber}", null, true, true, false)[0] ?? [];
+            $row = local_acervo_row_from_planilha($file, $sheetName, $rowNumber, $values, $fieldMap);
+            if ($row === null) {
+                continue;
+            }
+
+            upsert_imported_acervo_row($row);
+            $imported++;
+        }
+        $spreadsheet->disconnectWorksheets();
+    }
+
+    return ['imported' => $imported, 'completed' => true];
 }
 
 function import_planilha_sheet(string $file, Worksheet $sheet): int

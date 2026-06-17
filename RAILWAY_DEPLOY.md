@@ -10,15 +10,13 @@ O Railway usa:
 php -S 0.0.0.0:$PORT index.php
 ```
 
-## Dados persistentes
+## Banco de dados
 
-Crie um Volume no Railway para manter:
+Em producao, o Supabase e a base principal do sistema.
 
-- `banco_diarq.db`
-- `planilhas/`
+O SQLite local (`banco_diarq.db`) existe apenas para testes locais e como cache/espelho temporario durante a execucao. Ele nao deve ser enviado para o Git nem tratado como banco oficial do Railway.
 
-O sistema usa automaticamente `RAILWAY_VOLUME_MOUNT_PATH` quando o volume estiver montado.
-Se o volume estiver vazio, o sistema copia o `banco_diarq.db` da raiz para o volume na primeira inicializacao.
+Quando o Supabase estiver configurado, o sistema nao copia o banco local da raiz e nao importa automaticamente as planilhas locais no login.
 
 ## Variaveis obrigatorias
 
@@ -33,7 +31,7 @@ O schema antigo ja tem `inventario` e `usuarios`. Para indicadores, aplique tamb
 
 ## Variaveis opcionais
 
-- `DATA_DIR`: caminho alternativo para dados locais.
+- `DATA_DIR`: caminho alternativo para dados locais de teste/cache.
 - `OPENAI_API_KEY`: ativa o assistente virtual.
 - `OPENAI_MODEL`: modelo do assistente, padrao `gpt-4.1-mini`.
 

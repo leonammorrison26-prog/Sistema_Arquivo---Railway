@@ -106,18 +106,17 @@ function sync_after_login(): void
 
     try {
         $result = supabase_sync_on_login();
-        $import = import_planilhas_on_login();
         if (($result['enabled'] ?? false) === true) {
             $_SESSION['flash_success'] = 'Sincronizacao Supabase concluida: '
                 . (int) ($result['acervo'] ?? 0) . ' item(ns) do acervo e '
                 . (int) ($result['usuarios'] ?? 0) . ' usuario(s).';
-            if (($import['enabled'] ?? false) === true) {
-                $_SESSION['flash_success'] .= ' Planilhas: '
-                    . (int) ($import['imported'] ?? 0) . ' linha(s) processada(s) em '
-                    . (int) ($import['files'] ?? 0) . ' arquivo(s).';
-            } elseif (($import['reason'] ?? '') !== '') {
-                $_SESSION['flash_success'] .= ' Planilhas nao importadas: ' . $import['reason'];
+
+            if (password_change_required()) {
+                $_SESSION['flash_success'] .= ' Supabase e a base principal; planilhas locais nao serao importadas automaticamente.';
+                return;
             }
+
+            $_SESSION['flash_success'] .= ' Supabase e a base principal; planilhas locais nao serao importadas automaticamente.';
         }
     } catch (Throwable $e) {
         $_SESSION['flash_error'] = 'Login realizado, mas a sincronizacao com o Supabase falhou: ' . $e->getMessage();

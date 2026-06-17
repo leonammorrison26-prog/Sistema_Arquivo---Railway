@@ -24,7 +24,15 @@ define('BUNDLED_PLANILHAS_DIR', BASE_DIR . DIRECTORY_SEPARATOR . 'planilhas');
 define('ASSETS_DIR', BASE_DIR . DIRECTORY_SEPARATOR . 'assets');
 define('MANUAIS_DIR', BASE_DIR . DIRECTORY_SEPARATOR . 'manuais');
 
-if (!is_file(DB_PATH) && is_file(BUNDLED_DB_PATH)) {
+$supabaseConfiguredAtBoot = (getenv('SUPABASE_URL') ?: '') !== ''
+    && (
+        (getenv('SUPABASE_KEY') ?: '') !== ''
+        || (getenv('SUPABASE_ANON_KEY') ?: '') !== ''
+        || (getenv('SUPABASE_SERVICE_ROLE_KEY') ?: '') !== ''
+        || (getenv('SUPABASE_SERVICE_KEY') ?: '') !== ''
+    );
+
+if (!$supabaseConfiguredAtBoot && !is_file(DB_PATH) && is_file(BUNDLED_DB_PATH)) {
     @copy(BUNDLED_DB_PATH, DB_PATH);
 }
 
@@ -32,7 +40,7 @@ if (!is_dir(PLANILHAS_DIR)) {
     @mkdir(PLANILHAS_DIR, 0775, true);
 }
 
-if (is_dir(BUNDLED_PLANILHAS_DIR)) {
+if (!$supabaseConfiguredAtBoot && is_dir(BUNDLED_PLANILHAS_DIR)) {
     sync_bundled_planilhas(BUNDLED_PLANILHAS_DIR, PLANILHAS_DIR);
 }
 
