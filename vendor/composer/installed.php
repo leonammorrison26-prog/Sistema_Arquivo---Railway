@@ -29,9 +29,9 @@
             'dev_requirement' => false,
         ),
         'maennchen/zipstream-php' => array(
-            'pretty_version' => '3.2.2',
-            'version' => '3.2.2.0',
-            'reference' => '77bebeb4c6c340bb3c11c843b2cffd8bbfde4d5e',
+            'pretty_version' => '3.1.1',
+            'version' => '3.1.1.0',
+            'reference' => '6187e9cc4493da94b9b63eb2315821552015fca9',
             'type' => 'library',
             'install_path' => __DIR__ . '/../maennchen/zipstream-php',
             'aliases' => array(),
