@@ -12,6 +12,7 @@ function login_user(string $login, string $senha): bool
         $user = normalize_remote_user($supabaseUser);
         mirror_user_local($user);
         $_SESSION['user'] = $user;
+        sync_after_login();
         return true;
     }
 
@@ -24,7 +25,26 @@ function login_user(string $login, string $senha): bool
     }
 
     $_SESSION['user'] = $user;
+    sync_after_login();
     return true;
+}
+
+function sync_after_login(): void
+{
+    if (!supabase_enabled()) {
+        return;
+    }
+
+    try {
+        $result = supabase_sync_on_login();
+        if (($result['enabled'] ?? false) === true) {
+            $_SESSION['flash_success'] = 'Sincronizacao Supabase concluida: '
+                . (int) ($result['acervo'] ?? 0) . ' item(ns) do acervo e '
+                . (int) ($result['usuarios'] ?? 0) . ' usuario(s).';
+        }
+    } catch (Throwable $e) {
+        $_SESSION['flash_error'] = 'Login realizado, mas a sincronizacao com o Supabase falhou: ' . $e->getMessage();
+    }
 }
 
 function normalize_remote_user(array $row): array

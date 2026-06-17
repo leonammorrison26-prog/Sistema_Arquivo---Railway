@@ -109,3 +109,136 @@ function supabase_upsert(string $table, array $row, string $onConflict = ''): ar
     return supabase_request('POST', $table, $row, $query, true);
 }
 
+function supabase_fetch_all(string $table, array $query = [], int $pageSize = 1000): array
+{
+    $rows = [];
+    $offset = 0;
+
+    do {
+        $page = supabase_request('GET', $table, [], $query + [
+            'limit' => (string) $pageSize,
+            'offset' => (string) $offset,
+        ], false);
+
+        $count = count($page);
+        if ($count > 0) {
+            array_push($rows, ...$page);
+        }
+        $offset += $pageSize;
+    } while ($count === $pageSize);
+
+    return $rows;
+}
+
+function supabase_sync_on_login(): array
+{
+    if (!supabase_enabled()) {
+        return ['enabled' => false, 'usuarios' => 0, 'acervo' => 0];
+    }
+
+    $syncedUsers = supabase_sync_usuarios();
+    $syncedAcervo = supabase_sync_inventario();
+
+    return ['enabled' => true, 'usuarios' => $syncedUsers, 'acervo' => $syncedAcervo];
+}
+
+function supabase_sync_usuarios(): int
+{
+    $rows = supabase_fetch_all('usuarios', ['select' => '*', 'order' => 'id.asc']);
+    foreach ($rows as $row) {
+        mirror_user_local(normalize_remote_user($row));
+    }
+
+    return count($rows);
+}
+
+function supabase_sync_inventario(): int
+{
+    $rows = supabase_fetch_all('inventario', ['select' => '*', 'order' => 'id.asc']);
+    foreach ($rows as $row) {
+        supabase_mirror_acervo_local(supabase_normalize_inventario_row($row));
+    }
+
+    return count($rows);
+}
+
+function supabase_normalize_inventario_row(array $row): array
+{
+    $observacao = (string) ($row['observacao'] ?? '');
+    $id = supabase_extract_id_unico($observacao);
+    if ($id === '') {
+        $id = 'supabase_' . hash('sha256', (string) ($row['id'] ?? json_encode($row)));
+    }
+
+    $local = [
+        'ID_UNICO' => $id,
+        'UNIDADE' => normalize_text((string) ($row['unidade'] ?? '')),
+        'ASSUNTO' => normalize_text((string) ($row['assuntos'] ?? '')),
+        'INTERESSADO' => normalize_text((string) ($row['interessados'] ?? '')),
+        'DATA' => normalize_text((string) ($row['data'] ?? '')),
+        'TEMPORALIDADE' => normalize_text((string) ($row['n_cod_temp'] ?? '')),
+        'CAIXA' => normalize_text((string) ($row['n_caixas'] ?? '')),
+        'PROCESSO' => normalize_text((string) ($row['n_processos'] ?? $row['tipo_documento'] ?? '')),
+        'LOCALIZACAO' => normalize_text((string) ($row['localizacao'] ?? '')),
+        'OBSERVACAO' => normalize_text(trim(preg_replace('/\s*ID_UNICO=[^\s]+/i', '', $observacao) ?? $observacao)),
+        'VOLUMES' => normalize_text((string) ($row['volumes'] ?? '')),
+        'RESPONSAVEL' => normalize_text((string) ($row['responsavel'] ?? '')),
+        'DATA_LIMITE' => '---',
+        'ALTERADO_POR' => 'Supabase',
+        'ULTIMA_ALTERACAO' => normalize_text((string) ($row['data_cadastro'] ?? '')),
+        'STATUS_EMPRESTIMO' => '---',
+        'QUEM_RETIROU' => '---',
+        'FONTE_ARQUIVO' => 'supabase',
+    ];
+    $local['TEXTO_GERAL'] = build_texto_geral($local);
+
+    return $local;
+}
+
+function supabase_extract_id_unico(string $observacao): string
+{
+    if (preg_match('/ID_UNICO=([A-Za-z0-9_-]+)/', $observacao, $matches)) {
+        return $matches[1];
+    }
+
+    return '';
+}
+
+function supabase_mirror_acervo_local(array $row): void
+{
+    $exists = db()->prepare('SELECT COUNT(*) FROM acervo WHERE ID_UNICO = :id');
+    $exists->execute([':id' => $row['ID_UNICO']]);
+
+    if ((int) $exists->fetchColumn() > 0) {
+        db()->prepare("
+            UPDATE acervo SET
+                UNIDADE = :UNIDADE,
+                ASSUNTO = :ASSUNTO,
+                INTERESSADO = :INTERESSADO,
+                DATA = :DATA,
+                TEMPORALIDADE = :TEMPORALIDADE,
+                CAIXA = :CAIXA,
+                PROCESSO = :PROCESSO,
+                LOCALIZACAO = :LOCALIZACAO,
+                OBSERVACAO = :OBSERVACAO,
+                VOLUMES = :VOLUMES,
+                RESPONSAVEL = :RESPONSAVEL,
+                DATA_LIMITE = :DATA_LIMITE,
+                ALTERADO_POR = :ALTERADO_POR,
+                ULTIMA_ALTERACAO = :ULTIMA_ALTERACAO,
+                STATUS_EMPRESTIMO = :STATUS_EMPRESTIMO,
+                QUEM_RETIROU = :QUEM_RETIROU,
+                FONTE_ARQUIVO = :FONTE_ARQUIVO,
+                TEXTO_GERAL = :TEXTO_GERAL
+            WHERE ID_UNICO = :ID_UNICO
+        ")->execute($row);
+        return;
+    }
+
+    db()->prepare("
+        INSERT INTO acervo
+            (ID_UNICO, UNIDADE, ASSUNTO, INTERESSADO, DATA, TEMPORALIDADE, CAIXA, PROCESSO, LOCALIZACAO, OBSERVACAO, VOLUMES, RESPONSAVEL, DATA_LIMITE, ALTERADO_POR, ULTIMA_ALTERACAO, STATUS_EMPRESTIMO, QUEM_RETIROU, FONTE_ARQUIVO, TEXTO_GERAL)
+        VALUES
+            (:ID_UNICO, :UNIDADE, :ASSUNTO, :INTERESSADO, :DATA, :TEMPORALIDADE, :CAIXA, :PROCESSO, :LOCALIZACAO, :OBSERVACAO, :VOLUMES, :RESPONSAVEL, :DATA_LIMITE, :ALTERADO_POR, :ULTIMA_ALTERACAO, :STATUS_EMPRESTIMO, :QUEM_RETIROU, :FONTE_ARQUIVO, :TEXTO_GERAL)
+    ")->execute($row);
+}
