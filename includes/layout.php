@@ -22,6 +22,7 @@ function render_header(string $title = APP_NAME): void
     <body>
     <div class="app-shell">
         <?php render_sidebar(); ?>
+        <div class="mobile-sidebar-backdrop" aria-hidden="true"></div>
         <main class="main">
             <header class="page-title">
                 <div class="title-group">

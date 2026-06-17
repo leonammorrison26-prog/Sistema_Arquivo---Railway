@@ -54,18 +54,66 @@ if (loginMore) {
 }
 
 if (sidebar && appShell && sidebarToggle) {
-    const collapsed = localStorage.getItem('diarq-sidebar-collapsed') === '1';
-    sidebar.classList.toggle('is-collapsed', collapsed);
-    appShell.classList.toggle('sidebar-collapsed', collapsed);
-    sidebarToggle.setAttribute('aria-label', collapsed ? 'Expandir sidebar' : 'Recolher sidebar');
+    const mobileQuery = window.matchMedia('(max-width: 900px)');
+    const sidebarBackdrop = document.querySelector('.mobile-sidebar-backdrop');
+
+    function setMobileSidebar(open) {
+        sidebar.classList.toggle('is-mobile-open', open);
+        appShell.classList.toggle('sidebar-mobile-open', open);
+        document.body.classList.toggle('sidebar-mobile-open', open);
+        sidebarToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        sidebarToggle.setAttribute('aria-label', open ? 'Fechar menu' : 'Abrir menu');
+    }
+
+    function applyDesktopSidebarState() {
+        const collapsed = localStorage.getItem('diarq-sidebar-collapsed') === '1';
+        sidebar.classList.toggle('is-collapsed', collapsed);
+        appShell.classList.toggle('sidebar-collapsed', collapsed);
+        sidebarToggle.setAttribute('aria-expanded', (!collapsed).toString());
+        sidebarToggle.setAttribute('aria-label', collapsed ? 'Expandir sidebar' : 'Recolher sidebar');
+    }
+
+    function syncSidebarMode() {
+        if (mobileQuery.matches) {
+            sidebar.classList.remove('is-collapsed');
+            appShell.classList.remove('sidebar-collapsed');
+            setMobileSidebar(false);
+        } else {
+            setMobileSidebar(false);
+            applyDesktopSidebarState();
+        }
+    }
+
+    syncSidebarMode();
 
     sidebarToggle.addEventListener('click', () => {
+        if (mobileQuery.matches) {
+            setMobileSidebar(!sidebar.classList.contains('is-mobile-open'));
+            return;
+        }
         const next = !sidebar.classList.contains('is-collapsed');
         sidebar.classList.toggle('is-collapsed', next);
         appShell.classList.toggle('sidebar-collapsed', next);
         localStorage.setItem('diarq-sidebar-collapsed', next ? '1' : '0');
+        sidebarToggle.setAttribute('aria-expanded', (!next).toString());
         sidebarToggle.setAttribute('aria-label', next ? 'Expandir sidebar' : 'Recolher sidebar');
     });
+
+    sidebarBackdrop?.addEventListener('click', () => setMobileSidebar(false));
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && mobileQuery.matches) setMobileSidebar(false);
+    });
+
+    sidebar.addEventListener('click', (event) => {
+        if (mobileQuery.matches && event.target.closest('a.side-button')) setMobileSidebar(false);
+    });
+
+    if (typeof mobileQuery.addEventListener === 'function') {
+        mobileQuery.addEventListener('change', syncSidebarMode);
+    } else {
+        mobileQuery.addListener(syncSidebarMode);
+    }
 }
 
 function closeMoreMenu() {
