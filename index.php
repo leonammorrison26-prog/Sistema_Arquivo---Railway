@@ -852,21 +852,93 @@ function render_rel_temporalidade(): void
 function render_rel_indicadores(): void
 {
     $rows = db()->query('SELECT * FROM indicadores ORDER BY criado_em DESC LIMIT 300')->fetchAll();
+    if (!$rows && supabase_enabled()) {
+        try {
+            supabase_sync_indicadores();
+            $rows = db()->query('SELECT * FROM indicadores ORDER BY criado_em DESC LIMIT 300')->fetchAll();
+        } catch (Throwable $e) {
+            $_SESSION['flash_error'] = 'Nao foi possivel sincronizar indicadores automaticamente: ' . $e->getMessage();
+        }
+    }
     ?>
     <section class="panel">
-        <h2>Exportar e Consultar Indicadores</h2>
-        <div class="table-wrap">
-            <table>
-                <thead><tr><th>Data</th><th>Colaborador</th><th>Dados</th><th>Criado em</th></tr></thead>
-                <tbody>
-                <?php foreach ($rows as $row): ?>
-                    <tr><td><?= h($row['data']) ?></td><td><?= h($row['colaborador']) ?></td><td><?= h($row['dados_json']) ?></td><td><?= h($row['criado_em']) ?></td></tr>
-                <?php endforeach; ?>
-                </tbody>
-            </table>
+        <div class="toolbar">
+            <h2>Exportar e Consultar Indicadores</h2>
+            <form method="post">
+                <input type="hidden" name="action" value="sync_now">
+                <input type="hidden" name="return_page" value="rel_indicadores">
+                <button class="button" type="submit"><?= app_icon('download') ?>Sincronizar</button>
+            </form>
         </div>
+        <?php if (!$rows): ?>
+            <div class="empty-state">Nenhum indicador encontrado. Clique em Sincronizar para buscar os registros do Supabase.</div>
+        <?php else: ?>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Data</th><th>Colaborador</th><th>Total</th><th>Dados</th><th>Criado em</th></tr></thead>
+                    <tbody>
+                    <?php foreach ($rows as $row): ?>
+                        <?php $dados = indicador_dados((string) $row['dados_json']); ?>
+                        <tr>
+                            <td><?= h($row['data']) ?></td>
+                            <td><?= h($row['colaborador']) ?></td>
+                            <td><?= h((string) indicador_total($dados)) ?></td>
+                            <td><?= h(indicador_resumo($dados)) ?></td>
+                            <td><?= h($row['criado_em']) ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
     </section>
     <?php
+}
+
+function indicador_dados(string $json): array
+{
+    $dados = json_decode($json, true);
+    return is_array($dados) ? $dados : [];
+}
+
+function indicador_total(array $dados): int
+{
+    $total = 0;
+    foreach ($dados as $key => $value) {
+        if ($key === 'data' || $key === 'outra_atv' || !is_numeric($value)) {
+            continue;
+        }
+        $total += (int) $value;
+    }
+
+    return $total;
+}
+
+function indicador_resumo(array $dados): string
+{
+    $labels = [
+        'desarq_sei' => 'Desarq. SEI',
+        'caixas_cons' => 'Caixas consultadas',
+        'retorno_desarq' => 'Retorno desarq.',
+        'receb_guia' => 'Receb. guia',
+        'cx_sep_class' => 'Caixas classificacao',
+        'proc_class' => 'Proc./Doc. classificados',
+        'cx_enderecadas' => 'Caixas enderecadas',
+        'cx_higienizadas' => 'Caixas higienizadas',
+        'etiquetas_geradas' => 'Etiquetas',
+        'outra_atv' => 'Outra atividade',
+    ];
+
+    $parts = [];
+    foreach ($labels as $key => $label) {
+        $value = trim((string) ($dados[$key] ?? ''));
+        if ($value === '' || $value === '0') {
+            continue;
+        }
+        $parts[] = $label . ': ' . $value;
+    }
+
+    return $parts ? implode(' | ', $parts) : 'Sem valores preenchidos';
 }
 
 function render_assistente(): void

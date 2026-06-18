@@ -107,7 +107,8 @@ function sync_after_login(): void
         if (($result['supabase']['enabled'] ?? false) === true) {
             $messages[] = 'Supabase: '
                 . (int) ($result['supabase']['acervo'] ?? 0) . ' item(ns) do acervo e '
-                . (int) ($result['supabase']['usuarios'] ?? 0) . ' usuario(s).';
+                . (int) ($result['supabase']['usuarios'] ?? 0) . ' usuario(s), '
+                . (int) ($result['supabase']['indicadores'] ?? 0) . ' indicador(es).';
         }
 
         if (($result['planilhas']['enabled'] ?? false) === true) {

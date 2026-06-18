@@ -169,13 +169,14 @@ function supabase_fetch_all(string $table, array $query = [], int $pageSize = 10
 function supabase_sync_on_login(): array
 {
     if (!supabase_enabled()) {
-        return ['enabled' => false, 'usuarios' => 0, 'acervo' => 0];
+        return ['enabled' => false, 'usuarios' => 0, 'acervo' => 0, 'indicadores' => 0];
     }
 
     $syncedUsers = supabase_sync_usuarios();
     $syncedAcervo = supabase_sync_inventario();
+    $syncedIndicadores = supabase_sync_indicadores();
 
-    return ['enabled' => true, 'usuarios' => $syncedUsers, 'acervo' => $syncedAcervo];
+    return ['enabled' => true, 'usuarios' => $syncedUsers, 'acervo' => $syncedAcervo, 'indicadores' => $syncedIndicadores];
 }
 
 function supabase_sync_usuarios(): int
@@ -196,6 +197,34 @@ function supabase_sync_inventario(): int
     }
 
     return count($rows);
+}
+
+function supabase_sync_indicadores(): int
+{
+    $table = getenv('SUPABASE_INDICADORES_TABLE') ?: 'indicadores';
+    $rows = supabase_fetch_all($table, ['select' => '*', 'order' => 'criado_em.desc']);
+    foreach ($rows as $row) {
+        mirror_indicador_local($row);
+    }
+
+    return count($rows);
+}
+
+function mirror_indicador_local(array $row): void
+{
+    $data = (string) ($row['data'] ?? '');
+    $colaborador = (string) ($row['colaborador'] ?? '');
+    $dados = (string) ($row['dados_json'] ?? '{}');
+    $criadoEm = (string) ($row['criado_em'] ?? date('c'));
+
+    $exists = db()->prepare('SELECT id FROM indicadores WHERE data = :data AND colaborador = :colaborador AND dados_json = :dados LIMIT 1');
+    $exists->execute([':data' => $data, ':colaborador' => $colaborador, ':dados' => $dados]);
+    if ($exists->fetchColumn()) {
+        return;
+    }
+
+    db()->prepare('INSERT INTO indicadores (colaborador, data, dados_json, criado_em) VALUES (:colaborador, :data, :dados, :criado_em)')
+        ->execute([':colaborador' => $colaborador, ':data' => $data, ':dados' => $dados, ':criado_em' => $criadoEm]);
 }
 
 function supabase_normalize_inventario_row(array $row): array

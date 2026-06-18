@@ -73,7 +73,8 @@ function handle_actions(): void
             $result = sync_app_data(true);
             $_SESSION['flash_success'] = 'Sincronizacao manual concluida: '
                 . (int) ($result['supabase']['acervo'] ?? 0) . ' item(ns) do Supabase, '
-                . (int) ($result['supabase']['usuarios'] ?? 0) . ' usuario(s) e '
+                . (int) ($result['supabase']['usuarios'] ?? 0) . ' usuario(s), '
+                . (int) ($result['supabase']['indicadores'] ?? 0) . ' indicador(es) e '
                 . (int) ($result['planilhas']['imported'] ?? 0) . ' registro(s) de planilha.';
             if (($result['planilhas']['completed'] ?? true) === false) {
                 $_SESSION['flash_success'] .= ' Importacao parcial para evitar tempo limite; clique em Sincronizar novamente para continuar.';
