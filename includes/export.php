@@ -154,8 +154,11 @@ function export_xlsx_template_query_mapped(string $filename, string $templatePat
         ],
     ]);
     $sheet->getStyle("A1:{$lastColumn}1")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+    $columnWidths = [16, 12, 13, 18, 22, 10, 30, 32, 18, 18, 12, 14];
     for ($column = 1; $column <= $highestColumn; $column++) {
-        $sheet->getColumnDimensionByColumn($column)->setAutoSize(true);
+        $width = $columnWidths[$column - 1] ?? 16;
+        $sheet->getColumnDimensionByColumn($column)->setAutoSize(false);
+        $sheet->getColumnDimensionByColumn($column)->setWidth($width);
     }
 
     header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
