@@ -655,7 +655,7 @@ function render_indicadores(): void
                         <div class="indicador-group-head">
                             <div>
                                 <span class="eyebrow"><?= h($group) ?></span>
-                                <h3><?= h(count($keys)) ?> campos</h3>
+                                <h3><?= h((string) count($keys)) ?> campos</h3>
                             </div>
                             <strong data-indicador-group-total>0</strong>
                         </div>
