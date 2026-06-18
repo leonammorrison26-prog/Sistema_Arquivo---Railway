@@ -613,29 +613,79 @@ function render_documentos(): void
 
 function render_indicadores(): void
 {
-    $fields = [
-        'desarq_sei' => 'Desarquivamento de Proc./Doc. - Saida de Guia Fora (SEI)',
-        'caixas_cons' => 'Caixas consultadas em pesquisa de desarquivamento',
-        'retorno_desarq' => 'Retorno de Processos/Documentos Desarquivados',
-        'receb_guia' => 'Recebimento de Documentos - Guia de Transferencia',
-        'cx_sep_class' => 'Caixas separadas para classificacao',
-        'proc_class' => 'Processos/Documentos classificados',
-        'cx_enderecadas' => 'Caixas enderecadas',
-        'cx_higienizadas' => 'Caixas higienizadas',
-        'etiquetas_geradas' => 'Etiquetas geradas/impressas',
+    $fields = indicador_field_labels();
+    $groups = [
+        'Desarquivamento' => ['desarq_sei', 'caixas_cons', 'retorno_desarq', 'receb_guia'],
+        'Classificacao e eliminacao' => ['cx_sep_class', 'proc_class', 'cx_sep_eliminacao', 'cx_listadas_eliminacao', 'proc_listados_eliminacao'],
+        'Inventario e controle' => ['cx_inventariadas', 'proc_inventariados', 'docs_admin_produzidos', 'orientacao_tecnica'],
+        'Movimentacao fisica' => ['cx_remanejadas', 'cx_conferidas', 'cx_substituidas', 'etiquetas_geradas'],
     ];
     ?>
-    <section class="panel">
-        <h2>Registro de Indicadores Diarios</h2>
-        <p class="muted">Colaborador logado: <?= h($_SESSION['user']['nome'] ?? '') ?></p>
-        <form method="post" class="grid-form wide">
+    <section class="indicador-entry-page">
+        <form method="post" class="indicador-entry" data-indicador-form>
             <input type="hidden" name="action" value="save_indicadores">
-            <label>Data da Atividade <input type="date" name="data" value="<?= h(date('Y-m-d')) ?>"></label>
-            <?php foreach ($fields as $name => $label): ?>
-                <label><?= h($label) ?><input type="number" min="0" step="1" name="<?= h($name) ?>" value="0"></label>
-            <?php endforeach; ?>
-            <label class="span-2">Outra atividade. Qual?<textarea name="outra_atv" rows="3"></textarea></label>
-            <div class="form-actions span-2"><button class="primary">Salvar Registro Diario</button></div>
+            <div class="indicador-entry-hero">
+                <div>
+                    <span class="eyebrow">Indicadores DIARQ</span>
+                    <h2>Registro diario de produtividade</h2>
+                    <p>Preencha os movimentos do dia. O que for salvo aqui entra automaticamente no Relatorio Indicadores.</p>
+                </div>
+                <div class="indicador-entry-score">
+                    <span>Total do dia</span>
+                    <strong data-indicador-total>0</strong>
+                    <small data-indicador-filled>0 indicadores preenchidos</small>
+                </div>
+            </div>
+
+            <div class="indicador-entry-toolbar">
+                <label class="indicador-date-card">
+                    <span>Data da atividade</span>
+                    <input type="date" name="data" value="<?= h(date('Y-m-d')) ?>">
+                </label>
+                <div class="indicador-user-card">
+                    <span>Colaborador</span>
+                    <strong><?= h($_SESSION['user']['nome'] ?? 'Colaborador') ?></strong>
+                </div>
+                <a class="button" href="/?page=rel_indicadores"><?= app_icon('dashboard') ?>Consultar relatorio</a>
+            </div>
+
+            <div class="indicador-group-grid">
+                <?php foreach ($groups as $group => $keys): ?>
+                    <section class="indicador-group-card">
+                        <div class="indicador-group-head">
+                            <div>
+                                <span class="eyebrow"><?= h($group) ?></span>
+                                <h3><?= h(count($keys)) ?> campos</h3>
+                            </div>
+                            <strong data-indicador-group-total>0</strong>
+                        </div>
+                        <div class="indicador-fields">
+                            <?php foreach ($keys as $name): ?>
+                                <label class="indicador-field">
+                                    <span><?= h($fields[$name]) ?></span>
+                                    <input type="number" min="0" step="1" inputmode="numeric" name="<?= h($name) ?>" value="0" data-indicador-input>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                    </section>
+                <?php endforeach; ?>
+            </div>
+
+            <section class="indicador-notes">
+                <label>
+                    <span>Outra atividade. Qual?</span>
+                    <textarea name="outra_atv" rows="4" placeholder="Ex.: reuniao, apoio em despacho, separacao de caixas, atendimento tecnico..."></textarea>
+                </label>
+                <label>
+                    <span>Observacao</span>
+                    <textarea name="observacao" rows="4" placeholder="Detalhe algo importante para o relatorio, pendencias ou justificativas do dia."></textarea>
+                </label>
+            </section>
+
+            <div class="indicador-submit-bar">
+                <button class="button" type="button" data-indicador-clear>Zerar campos</button>
+                <button class="primary" type="submit"><?= app_icon('send') ?>Salvar Registro Diario</button>
+            </div>
         </form>
     </section>
     <?php
@@ -984,7 +1034,7 @@ function indicador_total(array $dados): int
 
     $total = 0;
     foreach ($dados as $key => $value) {
-        if ($key === 'data' || $key === 'outra_atv' || !is_numeric($value)) {
+        if (in_array($key, ['data', 'outra_atv', 'observacao'], true) || !is_numeric($value)) {
             continue;
         }
         $total += (int) $value;
@@ -1008,17 +1058,9 @@ function indicador_resumo(array $dados): string
         return $parts ? implode(' | ', $parts) : 'Sem valores preenchidos';
     }
 
-    $labels = [
-        'desarq_sei' => 'Desarq. SEI',
-        'caixas_cons' => 'Caixas consultadas',
-        'retorno_desarq' => 'Retorno desarq.',
-        'receb_guia' => 'Receb. guia',
-        'cx_sep_class' => 'Caixas classificacao',
-        'proc_class' => 'Proc./Doc. classificados',
-        'cx_enderecadas' => 'Caixas enderecadas',
-        'cx_higienizadas' => 'Caixas higienizadas',
-        'etiquetas_geradas' => 'Etiquetas',
+    $labels = indicador_field_labels() + [
         'outra_atv' => 'Outra atividade',
+        'observacao' => 'Observacao',
     ];
 
     $parts = [];

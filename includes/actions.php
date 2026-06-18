@@ -374,11 +374,36 @@ function save_manual_processos(): void
 
 function save_indicadores(): void
 {
-    $dados = $_POST;
-    unset($dados['action']);
+    $fields = indicador_field_labels();
+    $indicadores = [];
+    $labels = [];
+    foreach ($fields as $key => $label) {
+        $value = max(0, (int) ($_POST[$key] ?? 0));
+        $indicadores[$key] = $value;
+        $labels[$key] = $label;
+    }
+
+    $data = $_POST['data'] ?? date('Y-m-d');
+    $outraAtividade = trim((string) ($_POST['outra_atv'] ?? ''));
+    $observacao = trim((string) ($_POST['observacao'] ?? ''));
+    $dados = [
+        'origem' => 'sistema_indicadores',
+        'indicadores' => $indicadores,
+        'labels' => $labels,
+        'outra_atv' => $outraAtividade,
+        'observacao' => $observacao,
+        'dias' => [
+            $data => [
+                'indicadores' => array_filter($indicadores, static fn ($value) => (int) $value !== 0),
+                'outra_atividade' => $outraAtividade !== '' ? [$outraAtividade] : [],
+                'observacao' => $observacao !== '' ? [$observacao] : [],
+            ],
+        ],
+    ];
+
     $row = [
         'colaborador' => $_SESSION['user']['nome'] ?? 'Colaborador',
-        'data' => $_POST['data'] ?? date('Y-m-d'),
+        'data' => $data,
         'dados_json' => json_encode($dados, JSON_UNESCAPED_UNICODE),
     ];
 
@@ -390,6 +415,8 @@ function save_indicadores(): void
         ':data' => $row['data'],
         ':dados' => $row['dados_json'],
     ]);
+
+    $_SESSION['flash_success'] = 'Registro diario de indicadores salvo com sucesso.';
 }
 
 function save_user(): void

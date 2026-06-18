@@ -177,6 +177,56 @@ document.querySelectorAll('.temp-code-link').forEach((button) => {
     });
 });
 
+const indicadorForm = document.querySelector('[data-indicador-form]');
+if (indicadorForm) {
+    const inputs = Array.from(indicadorForm.querySelectorAll('[data-indicador-input]'));
+    const totalOutput = indicadorForm.querySelector('[data-indicador-total]');
+    const filledOutput = indicadorForm.querySelector('[data-indicador-filled]');
+    const clearButton = indicadorForm.querySelector('[data-indicador-clear]');
+    const formatter = new Intl.NumberFormat('pt-BR');
+
+    function updateIndicadorTotals() {
+        let total = 0;
+        let filled = 0;
+        indicadorForm.querySelectorAll('.indicador-group-card').forEach((group) => {
+            let groupTotal = 0;
+            group.querySelectorAll('[data-indicador-input]').forEach((input) => {
+                const value = Math.max(0, Number.parseInt(input.value || '0', 10) || 0);
+                const field = input.closest('.indicador-field');
+                field?.classList.toggle('is-filled', value > 0);
+                if (value > 0) filled += 1;
+                groupTotal += value;
+            });
+            const groupOutput = group.querySelector('[data-indicador-group-total]');
+            if (groupOutput) groupOutput.textContent = formatter.format(groupTotal);
+            total += groupTotal;
+        });
+        if (totalOutput) totalOutput.textContent = formatter.format(total);
+        if (filledOutput) filledOutput.textContent = `${filled} indicador${filled === 1 ? '' : 'es'} preenchido${filled === 1 ? '' : 's'}`;
+    }
+
+    inputs.forEach((input) => {
+        input.addEventListener('input', updateIndicadorTotals);
+        input.addEventListener('blur', () => {
+            if (input.value === '' || Number.parseInt(input.value, 10) < 0) input.value = '0';
+            updateIndicadorTotals();
+        });
+    });
+
+    clearButton?.addEventListener('click', () => {
+        inputs.forEach((input) => {
+            input.value = '0';
+        });
+        indicadorForm.querySelectorAll('textarea').forEach((textarea) => {
+            textarea.value = '';
+        });
+        updateIndicadorTotals();
+        inputs[0]?.focus();
+    });
+
+    updateIndicadorTotals();
+}
+
 const manualItems = document.querySelector('[data-manual-items]');
 const addManualItem = document.querySelector('[data-add-manual-item]');
 

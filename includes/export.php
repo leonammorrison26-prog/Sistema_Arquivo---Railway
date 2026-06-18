@@ -285,9 +285,10 @@ function indicador_report_item(array $row): array
             }
         }
     } else {
+        $legacyLabels = indicador_field_labels();
         foreach ($dados as $key => $value) {
-            if (!in_array($key, ['data', 'outra_atv'], true) && is_numeric($value) && (int) $value !== 0) {
-                $indicadores[$key] = (int) $value;
+            if (!in_array($key, ['data', 'outra_atv', 'observacao'], true) && is_numeric($value) && (int) $value !== 0) {
+                $indicadores[$legacyLabels[$key] ?? $key] = (int) $value;
             }
         }
     }
@@ -304,6 +305,9 @@ function indicador_report_item(array $row): array
     }
     if (!empty($dados['outra_atv'])) {
         $atividades[] = (string) $dados['outra_atv'];
+    }
+    if (!empty($dados['observacao'])) {
+        $observacoes[] = (string) $dados['observacao'];
     }
 
     return [

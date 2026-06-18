@@ -20,6 +20,29 @@ function redirect_to(string $page = 'busca'): never
     exit;
 }
 
+function indicador_field_labels(): array
+{
+    return [
+        'desarq_sei' => 'Desarquivamento de Processos/Documentos - Saida de Guia Fora (SEI)',
+        'caixas_cons' => 'Caixas consultadas em pesquisa de desarquivamento',
+        'retorno_desarq' => 'Retorno de Processos/Documentos Desarquivados',
+        'receb_guia' => 'Recebimento de Documentos - Guia de Transferencia',
+        'cx_sep_class' => 'Caixas separadas para classificacao',
+        'proc_class' => 'Processos/Documentos classificados',
+        'cx_sep_eliminacao' => 'Caixas separadas para eliminacao',
+        'cx_listadas_eliminacao' => 'Caixas listadas para eliminacao',
+        'proc_listados_eliminacao' => 'Processos/Documentos listados para eliminacao',
+        'cx_inventariadas' => 'Caixas inventariadas',
+        'proc_inventariados' => 'Processos/documentos inventariados',
+        'docs_admin_produzidos' => 'Documentos administrativos produzidos',
+        'orientacao_tecnica' => 'Orientacao tecnica / atendimentos realizados',
+        'cx_remanejadas' => 'Caixas remanejadas',
+        'cx_conferidas' => 'Caixas conferidas',
+        'cx_substituidas' => 'Caixas substituidas/trocadas',
+        'etiquetas_geradas' => 'Etiquetas geradas/impressas',
+    ];
+}
+
 function user_is_admin(?array $user = null): bool
 {
     $user = $user ?: ($_SESSION['user'] ?? []);
