@@ -27,14 +27,19 @@ function handle_actions(): void
             export_xlsx('suad_' . date('dmY') . '.xlsx', planilha_export_rows(), 'Cadastros');
         }
 
-        export_csv_query_mapped('acervo_diarq_' . date('dmY') . '.csv', '
+        export_xlsx_template_query_mapped(
+            'acervo_diarq_' . date('dmY') . '.xlsx',
+            ASSETS_DIR . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . 'planilha_padrao_inventario.xlsx',
+            '
             SELECT
                 UNIDADE, CAIXA, TEMPORALIDADE, OBSERVACAO, PROCESSO, VOLUMES,
                 ASSUNTO, INTERESSADO, LOCALIZACAO, RESPONSAVEL, DATA, DATA_LIMITE,
                 TEXTO_GERAL
             FROM acervo
             ORDER BY CAIXA, ASSUNTO
-        ', 'export_inventario_padrao_row');
+            ',
+            'export_inventario_padrao_row'
+        );
     }
 
     if (($_GET['export'] ?? '') === 'pendentes') {

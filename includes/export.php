@@ -7,6 +7,7 @@ require_once __DIR__ . '/functions.php';
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 function export_xlsx(string $filename, array $rows, string $sheetName = 'Dados'): never
@@ -107,6 +108,41 @@ function export_csv_query_mapped(string $filename, string $sql, callable $mapper
     }
 
     fclose($out);
+    exit;
+}
+
+function export_xlsx_template_query_mapped(string $filename, string $templatePath, string $sql, callable $mapper, array $params = []): never
+{
+    if (!class_exists(IOFactory::class)) {
+        throw new RuntimeException('Biblioteca PhpSpreadsheet nao instalada. Execute composer install.');
+    }
+
+    if (!is_file($templatePath)) {
+        throw new RuntimeException('Modelo de planilha nao encontrado: ' . $templatePath);
+    }
+
+    $stmt = db()->prepare($sql);
+    $stmt->execute($params);
+
+    $spreadsheet = IOFactory::load($templatePath);
+    $sheet = $spreadsheet->getActiveSheet();
+    $highestColumn = Coordinate::columnIndexFromString($sheet->getHighestColumn());
+    $rowNumber = 2;
+
+    while ($source = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $row = array_values($mapper($source));
+        for ($column = 1; $column <= $highestColumn; $column++) {
+            $sheet->setCellValue([$column, $rowNumber], (string) ($row[$column - 1] ?? ''));
+        }
+        $rowNumber++;
+    }
+
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Cache-Control: max-age=0');
+
+    $writer = new Xlsx($spreadsheet);
+    $writer->save('php://output');
     exit;
 }
 
