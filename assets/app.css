@@ -1855,6 +1855,13 @@ th { color: white; background: rgba(255,255,255,.05); }
 .menu-action:hover {
     background: #f3f6fb;
 }
+.menu-action-form {
+    margin: 0;
+}
+.menu-action-form .menu-action,
+a.menu-action {
+    text-decoration: none;
+}
 .menu-action kbd {
     color: #8b94a5;
     font: inherit;

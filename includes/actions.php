@@ -62,6 +62,18 @@ function handle_actions(): void
             redirect_to('trocar_senha');
         }
 
+        if ($action === 'sync_now') {
+            if (!supabase_enabled()) {
+                throw new RuntimeException('Supabase obrigatorio nao configurado: ' . supabase_status());
+            }
+
+            $result = supabase_sync_on_login();
+            $_SESSION['flash_success'] = 'Sincronizacao manual concluida: '
+                . (int) ($result['acervo'] ?? 0) . ' item(ns) do acervo e '
+                . (int) ($result['usuarios'] ?? 0) . ' usuario(s).';
+            redirect_to($_POST['return_page'] ?? current_page());
+        }
+
         if ($action === 'pdf_etiqueta') {
             require_once __DIR__ . '/pdf.php';
             output_etiqueta_pdf($_POST);

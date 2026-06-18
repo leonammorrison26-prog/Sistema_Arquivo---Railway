@@ -63,6 +63,16 @@ function render_header(string $title = APP_NAME): void
                             <span>Clear cache</span>
                             <kbd>C</kbd>
                         </button>
+                        <form method="post" class="menu-action-form">
+                            <input type="hidden" name="action" value="sync_now">
+                            <input type="hidden" name="return_page" value="<?= h(current_page()) ?>">
+                            <button type="submit" class="menu-action">
+                                <span>Sincronizar</span>
+                            </button>
+                        </form>
+                        <a class="menu-action" href="/?logout=1">
+                            <span>Sair / Logoff</span>
+                        </a>
                     </div>
                 </div>
             </header>
