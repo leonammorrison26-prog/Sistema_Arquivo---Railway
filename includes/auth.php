@@ -100,27 +100,46 @@ function change_logged_user_password(string $currentPassword, string $newPasswor
 
 function sync_after_login(): void
 {
-    if (!supabase_enabled()) {
-        return;
-    }
-
     try {
-        $result = supabase_sync_on_login();
-        if (($result['enabled'] ?? false) === true) {
-            $_SESSION['flash_success'] = 'Sincronizacao Supabase concluida: '
-                . (int) ($result['acervo'] ?? 0) . ' item(ns) do acervo e '
-                . (int) ($result['usuarios'] ?? 0) . ' usuario(s).';
+        $result = sync_app_data(false);
+        $messages = [];
 
-            if (password_change_required()) {
-                $_SESSION['flash_success'] .= ' Supabase e a base principal; planilhas locais nao serao importadas automaticamente.';
-                return;
-            }
+        if (($result['supabase']['enabled'] ?? false) === true) {
+            $messages[] = 'Supabase: '
+                . (int) ($result['supabase']['acervo'] ?? 0) . ' item(ns) do acervo e '
+                . (int) ($result['supabase']['usuarios'] ?? 0) . ' usuario(s).';
+        }
 
-            $_SESSION['flash_success'] .= ' Supabase e a base principal; planilhas locais nao serao importadas automaticamente.';
+        if (($result['planilhas']['enabled'] ?? false) === true) {
+            $messages[] = 'Planilhas: '
+                . (int) ($result['planilhas']['imported'] ?? 0) . ' registro(s) lido(s) de '
+                . (int) ($result['planilhas']['files'] ?? 0) . ' arquivo(s).';
+        } elseif (($result['planilhas']['reason'] ?? '') !== '') {
+            $messages[] = 'Planilhas: ' . $result['planilhas']['reason'];
+        }
+
+        if ($messages) {
+            $_SESSION['flash_success'] = 'Sincronizacao concluida. ' . implode(' ', $messages);
+        }
+
+        if (($result['planilhas']['completed'] ?? true) === false && !password_change_required()) {
+            $_SESSION['flash_success'] = ($_SESSION['flash_success'] ?? 'Sincronizacao iniciada.')
+                . ' Importacao parcial para evitar tempo limite; use Sincronizar novamente para continuar.';
         }
     } catch (Throwable $e) {
-        $_SESSION['flash_error'] = 'Login realizado, mas a sincronizacao com o Supabase falhou: ' . $e->getMessage();
+        $_SESSION['flash_error'] = 'Login realizado, mas a sincronizacao falhou: ' . $e->getMessage();
     }
+}
+
+function sync_app_data(bool $forcePlanilhas = false): array
+{
+    $supabase = supabase_enabled()
+        ? supabase_sync_on_login()
+        : ['enabled' => false, 'usuarios' => 0, 'acervo' => 0];
+
+    $planilhas = import_planilhas_on_login($forcePlanilhas);
+
+    return ['supabase' => $supabase, 'planilhas' => $planilhas];
 }
 
 function normalize_remote_user(array $row): array

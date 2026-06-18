@@ -40,7 +40,7 @@ if (!is_dir(PLANILHAS_DIR)) {
     @mkdir(PLANILHAS_DIR, 0775, true);
 }
 
-if (!$supabaseConfiguredAtBoot && is_dir(BUNDLED_PLANILHAS_DIR)) {
+if (is_dir(BUNDLED_PLANILHAS_DIR)) {
     sync_bundled_planilhas(BUNDLED_PLANILHAS_DIR, PLANILHAS_DIR);
 }
 
@@ -74,12 +74,21 @@ function sync_bundled_planilhas(string $sourceDir, string $targetDir): void
             continue;
         }
 
-        if (!is_file($targetPath)) {
+        $sourcePath = $item->getPathname();
+        if (realpath($targetPath) === realpath($sourcePath)) {
+            continue;
+        }
+
+        $shouldCopy = !is_file($targetPath)
+            || filesize($targetPath) !== filesize($sourcePath)
+            || filemtime($targetPath) < filemtime($sourcePath);
+
+        if ($shouldCopy) {
             $targetParent = dirname($targetPath);
             if (!is_dir($targetParent)) {
                 @mkdir($targetParent, 0775, true);
             }
-            @copy($item->getPathname(), $targetPath);
+            @copy($sourcePath, $targetPath);
         }
     }
 }
