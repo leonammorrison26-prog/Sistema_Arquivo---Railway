@@ -49,6 +49,12 @@ function handle_actions(): void
         export_xlsx('temporalidade_pendente.xlsx', temporalidade_pendente(), 'Pendentes');
     }
 
+    if (($_GET['export'] ?? '') === 'indicadores') {
+        require_once __DIR__ . '/export.php';
+        import_indicadores_planilhas(false);
+        export_xlsx('indicadores_diarq_' . date('dmY') . '.xlsx', indicadores_export_rows($_GET), 'Indicadores');
+    }
+
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         return;
     }

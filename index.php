@@ -851,46 +851,120 @@ function render_rel_temporalidade(): void
 
 function render_rel_indicadores(): void
 {
+    require_once __DIR__ . '/includes/export.php';
     import_indicadores_planilhas(false);
-    $rows = db()->query('SELECT * FROM indicadores ORDER BY criado_em DESC LIMIT 300')->fetchAll();
-    if (!$rows && supabase_enabled()) {
+    if ((int) db()->query('SELECT COUNT(*) FROM indicadores')->fetchColumn() === 0 && supabase_enabled()) {
         try {
             supabase_sync_indicadores();
-            $rows = db()->query('SELECT * FROM indicadores ORDER BY criado_em DESC LIMIT 300')->fetchAll();
         } catch (Throwable $e) {
             $_SESSION['flash_error'] = 'Nao foi possivel sincronizar indicadores automaticamente: ' . $e->getMessage();
         }
     }
+    $allRows = indicadores_report_rows();
+    $rows = indicadores_report_rows($_GET);
+    $colaboradores = array_values(array_unique(array_filter(array_map(fn ($row) => $row['colaborador'], $allRows))));
+    sort($colaboradores);
+    $periodos = array_values(array_unique(array_filter(array_map(fn ($row) => $row['data'], $allRows))));
+    rsort($periodos);
+    $totalAtividades = array_sum(array_map(fn ($row) => (int) $row['total'], $rows));
+    $activeUsers = count(array_unique(array_filter(array_map(fn ($row) => $row['colaborador'], $rows))));
+    $topIndicadores = [];
+    foreach ($rows as $row) {
+        foreach ($row['indicadores'] as $label => $value) {
+            $topIndicadores[$label] = ($topIndicadores[$label] ?? 0) + (int) $value;
+        }
+    }
+    arsort($topIndicadores);
+    $exportQuery = $_GET + ['export' => 'indicadores'];
     ?>
-    <section class="panel">
-        <div class="toolbar">
-            <h2>Exportar e Consultar Indicadores</h2>
-            <form method="post">
-                <input type="hidden" name="action" value="sync_now">
-                <input type="hidden" name="return_page" value="rel_indicadores">
-                <button class="button" type="submit"><?= app_icon('download') ?>Sincronizar</button>
-            </form>
-        </div>
-        <?php if (!$rows): ?>
-            <div class="empty-state">Nenhum indicador encontrado. Clique em Sincronizar para buscar os registros do Supabase.</div>
-        <?php else: ?>
-            <div class="table-wrap">
-                <table>
-                    <thead><tr><th>Data</th><th>Colaborador</th><th>Total</th><th>Dados</th><th>Criado em</th></tr></thead>
-                    <tbody>
-                    <?php foreach ($rows as $row): ?>
-                        <?php $dados = indicador_dados((string) $row['dados_json']); ?>
-                        <tr>
-                            <td><?= h($row['data']) ?></td>
-                            <td><?= h($row['colaborador']) ?></td>
-                            <td><?= h((string) indicador_total($dados)) ?></td>
-                            <td><?= h(indicador_resumo($dados)) ?></td>
-                            <td><?= h($row['criado_em']) ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                    </tbody>
-                </table>
+    <section class="indicadores-page">
+        <div class="indicadores-hero">
+            <div>
+                <span class="eyebrow">Painel semanal</span>
+                <h2>Indicadores DIARQ</h2>
+                <p>Consulta consolidada das planilhas mensais por colaborador, semana, atividade e observacoes.</p>
             </div>
+            <div class="dashboard-actions">
+                <a class="button export-button" href="/?<?= h(http_build_query($exportQuery)) ?>"><?= app_icon('download') ?>Exportar Excel</a>
+                <form method="post">
+                    <input type="hidden" name="action" value="sync_now">
+                    <input type="hidden" name="return_page" value="rel_indicadores">
+                    <button class="button" type="submit">Sincronizar</button>
+                </form>
+            </div>
+        </div>
+
+        <form class="indicadores-filters" method="get">
+            <input type="hidden" name="page" value="rel_indicadores">
+            <label>Colaborador
+                <select name="colaborador">
+                    <option value="">Todos</option>
+                    <?php foreach ($colaboradores as $colaborador): ?>
+                        <option value="<?= h($colaborador) ?>" <?= (($_GET['colaborador'] ?? '') === $colaborador) ? 'selected' : '' ?>><?= h($colaborador) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label>Semana
+                <select name="periodo">
+                    <option value="">Todas</option>
+                    <?php foreach ($periodos as $periodo): ?>
+                        <option value="<?= h($periodo) ?>" <?= (($_GET['periodo'] ?? '') === $periodo) ? 'selected' : '' ?>><?= h($periodo) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label>Busca
+                <input name="q" value="<?= h($_GET['q'] ?? '') ?>" placeholder="atividade, observacao, indicador...">
+            </label>
+            <div class="cadastros-filter-actions">
+                <button class="primary" type="submit">Filtrar</button>
+                <a class="button" href="/?page=rel_indicadores">Limpar</a>
+            </div>
+        </form>
+
+        <div class="dashboard-kpis">
+            <article class="kpi-card accent-blue"><span>Registros</span><strong><?= h(number_format(count($rows), 0, ',', '.')) ?></strong><small>semanas filtradas</small></article>
+            <article class="kpi-card accent-cyan"><span>Total de entregas</span><strong><?= h(number_format($totalAtividades, 0, ',', '.')) ?></strong><small>soma dos indicadores</small></article>
+            <article class="kpi-card accent-green"><span>Colaboradores</span><strong><?= h((string) $activeUsers) ?></strong><small>com atividade no filtro</small></article>
+            <article class="kpi-card accent-red"><span>Fontes</span><strong><?= h((string) count($periodos)) ?></strong><small>semanas disponiveis</small></article>
+        </div>
+
+        <?php if (!$rows): ?>
+            <div class="empty-state">Nenhum indicador encontrado para os filtros selecionados. Clique em Sincronizar para ler as planilhas da pasta INDICADORES.</div>
+        <?php else: ?>
+            <section class="indicadores-grid">
+                <article class="dashboard-card">
+                    <div class="dashboard-card-head"><div><span class="eyebrow">Ranking</span><h3>Principais indicadores</h3></div></div>
+                    <div class="rank-list compact">
+                        <?php foreach (array_slice($topIndicadores, 0, 8, true) as $label => $value): ?>
+                            <div class="rank-row">
+                                <span><?= h($label) ?></span>
+                                <strong><?= h(number_format((int) $value, 0, ',', '.')) ?></strong>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </article>
+
+                <article class="dashboard-card wide">
+                    <div class="dashboard-card-head"><div><span class="eyebrow">Consulta</span><h3>Registros semanais</h3></div></div>
+                    <div class="table-wrap indicadores-table-wrap">
+                        <table class="indicadores-table">
+                            <thead><tr><th>Semana</th><th>Colaborador</th><th>Total</th><th>Indicadores</th><th>Atividades / Observacoes</th><th>Origem</th></tr></thead>
+                            <tbody>
+                            <?php foreach ($rows as $row): ?>
+                                <tr>
+                                    <td><?= h($row['data']) ?></td>
+                                    <td><?= h($row['colaborador']) ?></td>
+                                    <td><strong><?= h((string) $row['total']) ?></strong></td>
+                                    <td><?= h($row['resumo']) ?></td>
+                                    <td><?= h(trim($row['atividades'] . ' ' . $row['observacoes']) ?: '---') ?></td>
+                                    <td><?= h($row['origem']) ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </article>
+            </section>
         <?php endif; ?>
     </section>
     <?php

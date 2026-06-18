@@ -191,9 +191,12 @@ function import_indicadores_sheet(string $file, Worksheet $sheet): int
     }
 
     $imported = 0;
+    $previousTotalColumn = 1;
     foreach ($totalColumns as $totalColumn) {
         $indicadores = [];
         $labels = [];
+        $dias = [];
+        $weekStartColumn = $previousTotalColumn + 1;
         for ($row = 2; $row <= $highestRow; $row++) {
             $label = trim((string) $sheet->getCell([1, $row])->getFormattedValue());
             if ($label === '') {
@@ -202,6 +205,20 @@ function import_indicadores_sheet(string $file, Worksheet $sheet): int
 
             $normalizedLabel = normalize_search_text($label);
             if (str_contains($normalizedLabel, 'outra atividade') || str_contains($normalizedLabel, 'observacao')) {
+                for ($column = $weekStartColumn; $column < $totalColumn; $column++) {
+                    $date = indicador_header_date($sheet->getCell([$column, 1])->getValue());
+                    if ($date === '') {
+                        continue;
+                    }
+
+                    $text = trim((string) $sheet->getCell([$column, $row])->getFormattedValue());
+                    if ($text === '') {
+                        continue;
+                    }
+
+                    $key = str_contains($normalizedLabel, 'observacao') ? 'observacao' : 'outra_atividade';
+                    $dias[$date][$key][] = $text;
+                }
                 continue;
             }
 
@@ -213,9 +230,25 @@ function import_indicadores_sheet(string $file, Worksheet $sheet): int
             $key = indicador_key($label);
             $indicadores[$key] = ($indicadores[$key] ?? 0) + $value;
             $labels[$key] = $label;
+
+            for ($column = $weekStartColumn; $column < $totalColumn; $column++) {
+                $date = indicador_header_date($sheet->getCell([$column, 1])->getValue());
+                if ($date === '') {
+                    continue;
+                }
+
+                $dailyValue = indicador_numeric_value($sheet->getCell([$column, $row])->getCalculatedValue());
+                if ($dailyValue === null || $dailyValue === 0) {
+                    continue;
+                }
+
+                $dias[$date]['indicadores'][$key] = ($dias[$date]['indicadores'][$key] ?? 0) + $dailyValue;
+            }
         }
 
-        if (!$indicadores) {
+        $previousTotalColumn = $totalColumn;
+
+        if (!$indicadores && !$dias) {
             continue;
         }
 
@@ -227,6 +260,7 @@ function import_indicadores_sheet(string $file, Worksheet $sheet): int
             'periodo' => $periodo,
             'indicadores' => $indicadores,
             'labels' => $labels,
+            'dias' => $dias,
         ];
 
         indicador_mirror_local([
@@ -303,6 +337,20 @@ function indicador_mirror_local(array $row): void
     $colaborador = (string) ($row['colaborador'] ?? '');
     $dados = (string) ($row['dados_json'] ?? '{}');
     $criadoEm = (string) ($row['criado_em'] ?? date('c'));
+    $decoded = json_decode($dados, true);
+
+    if (is_array($decoded) && ($decoded['origem'] ?? '') === 'planilha_indicadores') {
+        db()->prepare("
+            DELETE FROM indicadores
+            WHERE data = :data
+              AND colaborador = :colaborador
+              AND dados_json LIKE :origem
+        ")->execute([
+            ':data' => $data,
+            ':colaborador' => $colaborador,
+            ':origem' => '%"origem":"planilha_indicadores"%',
+        ]);
+    }
 
     $exists = db()->prepare('SELECT id FROM indicadores WHERE data = :data AND colaborador = :colaborador AND dados_json = :dados LIMIT 1');
     $exists->execute([':data' => $data, ':colaborador' => $colaborador, ':dados' => $dados]);

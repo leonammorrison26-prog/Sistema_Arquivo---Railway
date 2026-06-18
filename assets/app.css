@@ -1060,6 +1060,62 @@ th { color: white; background: rgba(255,255,255,.05); }
     display: grid;
     gap: 16px;
 }
+.indicadores-page {
+    display: grid;
+    gap: 16px;
+}
+.indicadores-hero,
+.indicadores-filters {
+    border: 1px solid rgba(148, 163, 184, .16);
+    border-radius: 12px;
+    background: rgba(17, 24, 39, .72);
+    box-shadow: 0 16px 38px rgba(0, 0, 0, .14);
+}
+.indicadores-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 18px;
+    align-items: center;
+    padding: 20px;
+}
+.indicadores-hero h2 {
+    margin: 0;
+    color: #fff;
+    font-size: clamp(1.45rem, 2.4vw, 2rem);
+}
+.indicadores-hero p {
+    margin: 8px 0 0;
+    color: #cbd5e1;
+}
+.indicadores-filters {
+    display: grid;
+    grid-template-columns: minmax(160px, .7fr) minmax(220px, .9fr) minmax(260px, 1fr) auto;
+    gap: 12px;
+    align-items: end;
+    padding: 16px;
+}
+.indicadores-grid {
+    display: grid;
+    grid-template-columns: minmax(260px, .65fr) minmax(0, 1.35fr);
+    gap: 16px;
+}
+.indicadores-table-wrap {
+    max-height: 560px;
+}
+.indicadores-table {
+    min-width: 1180px;
+}
+.indicadores-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #151b27;
+}
+.indicadores-table td {
+    color: #e5edf8;
+    font-size: .9rem;
+    line-height: 1.45;
+}
 .dashboard-hero,
 .dashboard-card,
 .kpi-card {

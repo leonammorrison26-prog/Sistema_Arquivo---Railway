@@ -253,3 +253,131 @@ function export_inventario_padrao_row(array $row): array
         'DATA - limite' => export_first_filled($row, 'DATA_LIMITE', 'DATA - limite'),
     ];
 }
+
+function indicadores_report_rows(array $filters = []): array
+{
+    $rows = db()->query('SELECT * FROM indicadores ORDER BY data DESC, colaborador ASC, criado_em DESC')->fetchAll();
+    $report = [];
+
+    foreach ($rows as $row) {
+        $item = indicador_report_item($row);
+        if (indicador_report_matches($item, $filters)) {
+            $report[] = $item;
+        }
+    }
+
+    return $report;
+}
+
+function indicador_report_item(array $row): array
+{
+    $dados = json_decode((string) ($row['dados_json'] ?? '{}'), true);
+    $dados = is_array($dados) ? $dados : [];
+    $indicadores = [];
+    $labels = [];
+
+    if (isset($dados['indicadores']) && is_array($dados['indicadores'])) {
+        $labels = is_array($dados['labels'] ?? null) ? $dados['labels'] : [];
+        foreach ($dados['indicadores'] as $key => $value) {
+            if (is_numeric($value) && (int) $value !== 0) {
+                $label = (string) ($labels[$key] ?? $key);
+                $indicadores[$label] = ($indicadores[$label] ?? 0) + (int) $value;
+            }
+        }
+    } else {
+        foreach ($dados as $key => $value) {
+            if (!in_array($key, ['data', 'outra_atv'], true) && is_numeric($value) && (int) $value !== 0) {
+                $indicadores[$key] = (int) $value;
+            }
+        }
+    }
+
+    $atividades = [];
+    $observacoes = [];
+    foreach (($dados['dias'] ?? []) as $dia => $diaDados) {
+        foreach ((array) ($diaDados['outra_atividade'] ?? []) as $text) {
+            $atividades[] = $dia . ': ' . $text;
+        }
+        foreach ((array) ($diaDados['observacao'] ?? []) as $text) {
+            $observacoes[] = $dia . ': ' . $text;
+        }
+    }
+    if (!empty($dados['outra_atv'])) {
+        $atividades[] = (string) $dados['outra_atv'];
+    }
+
+    return [
+        'data' => (string) ($row['data'] ?? ''),
+        'colaborador' => (string) ($row['colaborador'] ?? ''),
+        'total' => array_sum($indicadores),
+        'indicadores' => $indicadores,
+        'resumo' => indicador_report_summary($indicadores),
+        'atividades' => implode(' | ', array_unique(array_filter($atividades))),
+        'observacoes' => implode(' | ', array_unique(array_filter($observacoes))),
+        'origem' => (string) ($dados['arquivo'] ?? $dados['origem'] ?? 'Sistema'),
+        'criado_em' => (string) ($row['criado_em'] ?? ''),
+    ];
+}
+
+function indicador_report_summary(array $indicadores): string
+{
+    if (!$indicadores) {
+        return 'Sem valores preenchidos';
+    }
+
+    arsort($indicadores);
+    $parts = [];
+    foreach ($indicadores as $label => $value) {
+        $parts[] = $label . ': ' . (int) $value;
+    }
+
+    return implode(' | ', $parts);
+}
+
+function indicador_report_matches(array $item, array $filters): bool
+{
+    $colaborador = trim((string) ($filters['colaborador'] ?? ''));
+    $periodo = trim((string) ($filters['periodo'] ?? ''));
+    $q = normalize_search_text((string) ($filters['q'] ?? ''));
+
+    if ($colaborador !== '' && strcasecmp($item['colaborador'], $colaborador) !== 0) {
+        return false;
+    }
+    if ($periodo !== '' && $item['data'] !== $periodo) {
+        return false;
+    }
+    if ($q !== '') {
+        $haystack = normalize_search_text(implode(' ', [
+            $item['data'],
+            $item['colaborador'],
+            $item['resumo'],
+            $item['atividades'],
+            $item['observacoes'],
+            $item['origem'],
+        ]));
+        if (!str_contains($haystack, $q)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function indicadores_export_rows(array $filters = []): array
+{
+    $rows = [];
+    foreach (indicadores_report_rows($filters) as $item) {
+        $rows[] = [
+            'Periodo' => $item['data'],
+            'Colaborador' => $item['colaborador'],
+            'Total' => $item['total'],
+            'Indicadores' => $item['resumo'],
+            'Atividades' => $item['atividades'],
+            'Observacoes' => $item['observacoes'],
+            'Origem' => $item['origem'],
+            'Criado em' => $item['criado_em'],
+        ];
+    }
+
+    return $rows;
+}
