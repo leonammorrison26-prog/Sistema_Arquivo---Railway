@@ -851,6 +851,7 @@ function render_rel_temporalidade(): void
 
 function render_rel_indicadores(): void
 {
+    import_indicadores_planilhas(false);
     $rows = db()->query('SELECT * FROM indicadores ORDER BY criado_em DESC LIMIT 300')->fetchAll();
     if (!$rows && supabase_enabled()) {
         try {
@@ -903,6 +904,10 @@ function indicador_dados(string $json): array
 
 function indicador_total(array $dados): int
 {
+    if (isset($dados['indicadores']) && is_array($dados['indicadores'])) {
+        return indicador_total($dados['indicadores']);
+    }
+
     $total = 0;
     foreach ($dados as $key => $value) {
         if ($key === 'data' || $key === 'outra_atv' || !is_numeric($value)) {
@@ -916,6 +921,19 @@ function indicador_total(array $dados): int
 
 function indicador_resumo(array $dados): string
 {
+    if (isset($dados['indicadores']) && is_array($dados['indicadores'])) {
+        $labels = is_array($dados['labels'] ?? null) ? $dados['labels'] : [];
+        $parts = [];
+        foreach ($dados['indicadores'] as $key => $value) {
+            if (!is_numeric($value) || (int) $value === 0) {
+                continue;
+            }
+            $parts[] = ($labels[$key] ?? $key) . ': ' . (int) $value;
+        }
+
+        return $parts ? implode(' | ', $parts) : 'Sem valores preenchidos';
+    }
+
     $labels = [
         'desarq_sei' => 'Desarq. SEI',
         'caixas_cons' => 'Caixas consultadas',

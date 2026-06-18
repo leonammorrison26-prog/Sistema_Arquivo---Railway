@@ -119,6 +119,12 @@ function sync_after_login(): void
             $messages[] = 'Planilhas: ' . $result['planilhas']['reason'];
         }
 
+        if (($result['indicadores_planilhas']['enabled'] ?? false) === true) {
+            $messages[] = 'Indicadores: '
+                . (int) ($result['indicadores_planilhas']['imported'] ?? 0) . ' registro(s) semanal(is) de '
+                . (int) ($result['indicadores_planilhas']['files'] ?? 0) . ' arquivo(s).';
+        }
+
         if ($messages) {
             $_SESSION['flash_success'] = 'Sincronizacao concluida. ' . implode(' ', $messages);
         }
@@ -139,8 +145,9 @@ function sync_app_data(bool $forcePlanilhas = false): array
         : ['enabled' => false, 'usuarios' => 0, 'acervo' => 0];
 
     $planilhas = import_planilhas_on_login($forcePlanilhas);
+    $indicadoresPlanilhas = import_indicadores_planilhas($forcePlanilhas);
 
-    return ['supabase' => $supabase, 'planilhas' => $planilhas];
+    return ['supabase' => $supabase, 'planilhas' => $planilhas, 'indicadores_planilhas' => $indicadoresPlanilhas];
 }
 
 function normalize_remote_user(array $row): array

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 use PhpOffice\PhpSpreadsheet\Reader\IReadFilter;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
@@ -115,6 +116,202 @@ function planilha_import_files(): array
 
         return !str_contains(normalize_search_text($name), 'indicadores');
     }));
+}
+
+function indicador_planilha_files(): array
+{
+    if (!defined('INDICADORES_PLANILHAS_DIR') || !is_dir(INDICADORES_PLANILHAS_DIR)) {
+        return [];
+    }
+
+    $files = glob(INDICADORES_PLANILHAS_DIR . DIRECTORY_SEPARATOR . '*.xlsx') ?: [];
+    return array_values(array_filter($files, fn ($file) => is_file($file) && !str_starts_with(basename($file), '~$')));
+}
+
+function import_indicadores_planilhas(bool $force = false): array
+{
+    $files = indicador_planilha_files();
+    if (!$files) {
+        return ['enabled' => true, 'imported' => 0, 'files' => 0, 'reason' => 'Nenhuma planilha de indicadores encontrada.'];
+    }
+
+    ensure_import_meta_table();
+    $fingerprint = planilhas_fingerprint($files);
+    if (!$force && import_meta_get('indicadores_planilhas_fingerprint') === $fingerprint) {
+        return ['enabled' => true, 'imported' => 0, 'files' => count($files), 'skipped' => true];
+    }
+
+    $imported = 0;
+    foreach ($files as $file) {
+        $imported += import_indicadores_file($file);
+    }
+
+    import_meta_set('indicadores_planilhas_fingerprint', $fingerprint);
+    import_meta_set('indicadores_planilhas_last_import', date('c'));
+
+    return ['enabled' => true, 'imported' => $imported, 'files' => count($files), 'skipped' => false, 'completed' => true, 'reason' => ''];
+}
+
+function import_indicadores_file(string $file): int
+{
+    $reader = IOFactory::createReaderForFile($file);
+    $reader->setReadDataOnly(true);
+    $imported = 0;
+
+    foreach ($reader->listWorksheetInfo($file) as $sheetInfo) {
+        $sheetName = (string) ($sheetInfo['worksheetName'] ?? '');
+        $normalized = normalize_search_text($sheetName);
+        if ($sheetName === '' || in_array($normalized, ['glossario', 'total', 'planilha1'], true)) {
+            continue;
+        }
+
+        $reader = IOFactory::createReaderForFile($file);
+        $reader->setReadDataOnly(true);
+        $reader->setLoadSheetsOnly([$sheetName]);
+        $spreadsheet = $reader->load($file);
+        $sheet = $spreadsheet->getActiveSheet();
+        $imported += import_indicadores_sheet($file, $sheet);
+        $spreadsheet->disconnectWorksheets();
+    }
+
+    return $imported;
+}
+
+function import_indicadores_sheet(string $file, Worksheet $sheet): int
+{
+    $highestColumn = Coordinate::columnIndexFromString($sheet->getHighestColumn());
+    $highestRow = $sheet->getHighestRow();
+    $totalColumns = [];
+
+    for ($column = 2; $column <= $highestColumn; $column++) {
+        $header = normalize_search_text((string) $sheet->getCell([$column, 1])->getFormattedValue());
+        if (str_contains($header, 'total semana')) {
+            $totalColumns[] = $column;
+        }
+    }
+
+    $imported = 0;
+    foreach ($totalColumns as $totalColumn) {
+        $indicadores = [];
+        $labels = [];
+        for ($row = 2; $row <= $highestRow; $row++) {
+            $label = trim((string) $sheet->getCell([1, $row])->getFormattedValue());
+            if ($label === '') {
+                continue;
+            }
+
+            $normalizedLabel = normalize_search_text($label);
+            if (str_contains($normalizedLabel, 'outra atividade') || str_contains($normalizedLabel, 'observacao')) {
+                continue;
+            }
+
+            $value = indicador_numeric_value($sheet->getCell([$totalColumn, $row])->getCalculatedValue());
+            if ($value === null || $value === 0) {
+                continue;
+            }
+
+            $key = indicador_key($label);
+            $indicadores[$key] = ($indicadores[$key] ?? 0) + $value;
+            $labels[$key] = $label;
+        }
+
+        if (!$indicadores) {
+            continue;
+        }
+
+        $periodo = indicador_week_label($sheet, $totalColumn);
+        $payload = [
+            'origem' => 'planilha_indicadores',
+            'arquivo' => basename($file),
+            'aba' => $sheet->getTitle(),
+            'periodo' => $periodo,
+            'indicadores' => $indicadores,
+            'labels' => $labels,
+        ];
+
+        indicador_mirror_local([
+            'colaborador' => $sheet->getTitle(),
+            'data' => $periodo,
+            'dados_json' => json_encode($payload, JSON_UNESCAPED_UNICODE),
+            'criado_em' => date('c', (int) filemtime($file)),
+        ]);
+        $imported++;
+    }
+
+    return $imported;
+}
+
+function indicador_numeric_value(mixed $value): ?int
+{
+    if (is_string($value)) {
+        $value = trim($value);
+        if ($value === '' || str_starts_with($value, '#')) {
+            return null;
+        }
+        $value = str_replace(',', '.', $value);
+    }
+
+    return is_numeric($value) ? (int) $value : null;
+}
+
+function indicador_key(string $label): string
+{
+    $key = normalize_search_text($label);
+    $key = preg_replace('/[^a-z0-9]+/', '_', $key) ?? $key;
+    return trim($key, '_') ?: 'indicador';
+}
+
+function indicador_week_label(Worksheet $sheet, int $totalColumn): string
+{
+    $dates = [];
+    for ($column = max(2, $totalColumn - 5); $column < $totalColumn; $column++) {
+        $value = $sheet->getCell([$column, 1])->getValue();
+        $date = indicador_header_date($value);
+        if ($date !== '') {
+            $dates[] = $date;
+        }
+    }
+
+    if (!$dates) {
+        return 'Semana ' . Coordinate::stringFromColumnIndex($totalColumn);
+    }
+
+    return reset($dates) . ' a ' . end($dates);
+}
+
+function indicador_header_date(mixed $value): string
+{
+    if ($value instanceof DateTimeInterface) {
+        return $value->format('d/m/Y');
+    }
+
+    if (is_numeric($value)) {
+        try {
+            return ExcelDate::excelToDateTimeObject((float) $value)->format('d/m/Y');
+        } catch (Throwable) {
+            return '';
+        }
+    }
+
+    $value = trim((string) $value);
+    return preg_match('/\d{2}\/\d{2}/', $value) === 1 ? $value : '';
+}
+
+function indicador_mirror_local(array $row): void
+{
+    $data = (string) ($row['data'] ?? '');
+    $colaborador = (string) ($row['colaborador'] ?? '');
+    $dados = (string) ($row['dados_json'] ?? '{}');
+    $criadoEm = (string) ($row['criado_em'] ?? date('c'));
+
+    $exists = db()->prepare('SELECT id FROM indicadores WHERE data = :data AND colaborador = :colaborador AND dados_json = :dados LIMIT 1');
+    $exists->execute([':data' => $data, ':colaborador' => $colaborador, ':dados' => $dados]);
+    if ($exists->fetchColumn()) {
+        return;
+    }
+
+    db()->prepare('INSERT INTO indicadores (colaborador, data, dados_json, criado_em) VALUES (:colaborador, :data, :dados, :criado_em)')
+        ->execute([':colaborador' => $colaborador, ':data' => $data, ':dados' => $dados, ':criado_em' => $criadoEm]);
 }
 
 function planilhas_fingerprint(array $files): string
