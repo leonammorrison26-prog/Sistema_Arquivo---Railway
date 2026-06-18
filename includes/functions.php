@@ -4,8 +4,19 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
 
-function h(?string $value): string
+function h(mixed $value): string
 {
+    if (is_array($value)) {
+        $value = implode(', ', array_map(static function (mixed $item): string {
+            if (is_array($item) || is_object($item)) {
+                return json_encode($item, JSON_UNESCAPED_UNICODE) ?: '';
+            }
+            return (string) $item;
+        }, $value));
+    } elseif (is_object($value)) {
+        $value = method_exists($value, '__toString') ? (string) $value : (json_encode($value, JSON_UNESCAPED_UNICODE) ?: '');
+    }
+
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
 

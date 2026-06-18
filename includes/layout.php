@@ -20,6 +20,18 @@ function render_header(string $title = APP_NAME): void
         <link rel="stylesheet" href="/assets/app.css">
     </head>
     <body>
+    <script>
+        (() => {
+            try {
+                const saved = localStorage.getItem('diarq-theme') || localStorage.getItem('diarq-login-theme') || 'system';
+                const dark = saved === 'system'
+                    ? window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+                    : saved === 'dark';
+                document.body.classList.toggle('theme-light', !dark);
+                document.body.classList.toggle('theme-dark', dark);
+            } catch (error) {}
+        })();
+    </script>
     <div class="app-shell">
         <?php render_sidebar(); ?>
         <div class="mobile-sidebar-backdrop" aria-hidden="true"></div>
