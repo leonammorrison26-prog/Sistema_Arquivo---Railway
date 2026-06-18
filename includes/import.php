@@ -292,18 +292,21 @@ function map_planilha_headers(array $headers): array
 
 function planilha_field_for_header(string $header): string
 {
+    $header = trim($header);
+
     return match (true) {
         str_contains($header, 'caixa') || preg_match('/\bcx\b/', $header) === 1 => 'CAIXA',
         str_contains($header, 'processo') || str_contains($header, 'nup') => 'PROCESSO',
         str_contains($header, 'interessado') || str_contains($header, 'servidor') || str_contains($header, 'nome') => 'INTERESSADO',
         str_contains($header, 'assunto') || str_contains($header, 'descricao') || str_contains($header, 'conteudo') => 'ASSUNTO',
         str_contains($header, 'unidade') || str_contains($header, 'orgao') || str_contains($header, 'setor') => 'UNIDADE',
-        str_contains($header, 'localizacao') || str_contains($header, 'endereco') || str_contains($header, 'bloco') || str_contains($header, 'estante') => 'LOCALIZACAO',
+        str_contains($header, 'localiza') || str_contains($header, 'endereco') || str_contains($header, 'bloco') || str_contains($header, 'estante') => 'LOCALIZACAO',
         str_contains($header, 'temporalidade') || str_contains($header, 'cod temp') || str_contains($header, 'codigo classificacao') => 'TEMPORALIDADE',
         str_contains($header, 'volume') => 'VOLUMES',
-        $header === 'data' || str_contains($header, 'data cadastro') => 'DATA',
+        $header === 'data' || str_contains($header, 'data cadastro') || str_contains($header, 'atualizado em') => 'DATA',
         str_contains($header, 'data limite') || str_contains($header, 'data-limite') => 'DATA_LIMITE',
-        str_contains($header, 'observacao') || str_contains($header, 'tipo doc') => 'OBSERVACAO',
+        str_contains($header, 'respons') => 'RESPONSAVEL',
+        str_contains($header, 'observacao') || str_contains($header, 'tipo de documento') || str_contains($header, 'tipo doc') || str_contains($header, 'esp') => 'OBSERVACAO',
         default => '',
     };
 }
@@ -323,7 +326,7 @@ function local_acervo_row_from_planilha(string $file, string $sheet, int $rowNum
         'LOCALIZACAO' => planilha_value($values, $fieldMap, 'LOCALIZACAO'),
         'OBSERVACAO' => planilha_value($values, $fieldMap, 'OBSERVACAO', 'Importado de planilha'),
         'VOLUMES' => planilha_value($values, $fieldMap, 'VOLUMES'),
-        'RESPONSAVEL' => 'Importacao automatica',
+        'RESPONSAVEL' => planilha_value($values, $fieldMap, 'RESPONSAVEL'),
         'DATA_LIMITE' => planilha_value($values, $fieldMap, 'DATA_LIMITE'),
         'ALTERADO_POR' => 'Importacao planilhas',
         'ULTIMA_ALTERACAO' => date('d/m/Y H:i:s'),

@@ -8,6 +8,8 @@ require_once __DIR__ . '/functions.php';
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 function export_xlsx(string $filename, array $rows, string $sheetName = 'Dados'): never
@@ -135,6 +137,25 @@ function export_xlsx_template_query_mapped(string $filename, string $templatePat
             $sheet->setCellValue([$column, $rowNumber], (string) ($row[$column - 1] ?? ''));
         }
         $rowNumber++;
+    }
+
+    $lastRow = max(1, $rowNumber - 1);
+    $lastColumn = Coordinate::stringFromColumnIndex($highestColumn);
+    $sheet->getStyle("A1:{$lastColumn}{$lastRow}")->applyFromArray([
+        'borders' => [
+            'allBorders' => [
+                'borderStyle' => Border::BORDER_THIN,
+                'color' => ['argb' => 'FF000000'],
+            ],
+        ],
+        'alignment' => [
+            'vertical' => Alignment::VERTICAL_CENTER,
+            'wrapText' => true,
+        ],
+    ]);
+    $sheet->getStyle("A1:{$lastColumn}1")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+    for ($column = 1; $column <= $highestColumn; $column++) {
+        $sheet->getColumnDimensionByColumn($column)->setAutoSize(true);
     }
 
     header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
