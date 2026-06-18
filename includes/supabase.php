@@ -109,6 +109,12 @@ function supabase_update_user_password(string $login, string $senha): void
         throw new RuntimeException('Supabase obrigatorio nao configurado. Configure SUPABASE_URL e SUPABASE_KEY no Railway.');
     }
 
+    $existingUser = supabase_request('GET', 'usuarios', [], [
+        'select' => 'id,usuario',
+        'usuario' => 'ilike.' . $login,
+        'limit' => '1',
+    ], false);
+
     $rows = supabase_request('PATCH', 'usuarios', ['senha' => $senha], [
         'usuario' => 'ilike.' . $login,
     ], true);
@@ -124,6 +130,10 @@ function supabase_update_user_password(string $login, string $senha): void
         if ($rows) {
             return;
         }
+    }
+
+    if ($existingUser) {
+        throw new RuntimeException('O usuario ' . $login . ' existe no Supabase, mas a tabela usuarios nao permitiu UPDATE. Aplique a migration supabase/migrations/20260618120000_allow_usuarios_update.sql no Supabase de producao.');
     }
 
     throw new RuntimeException('Nao foi possivel atualizar a senha no Supabase para o usuario ' . $login . '.');
