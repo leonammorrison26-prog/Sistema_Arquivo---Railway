@@ -25,9 +25,10 @@ Quando o Supabase estiver configurado, o sistema nao copia o banco local da raiz
 
 As gravacoes de acervo, usuarios e indicadores tentam salvar primeiro no Supabase. Se o Supabase falhar, a gravacao local e interrompida.
 
-O schema antigo ja tem `inventario` e `usuarios`. Para indicadores, aplique tambem:
+O schema antigo ja tem `inventario` e `usuarios`. Aplique tambem:
 
 - `supabase/migrations/20260615213000_add_indicadores.sql`
+- `supabase/migrations/20260618120000_allow_usuarios_update.sql`
 
 ## Variaveis opcionais
 

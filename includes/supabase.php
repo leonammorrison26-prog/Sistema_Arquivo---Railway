@@ -109,17 +109,24 @@ function supabase_update_user_password(string $login, string $senha): void
         throw new RuntimeException('Supabase obrigatorio nao configurado. Configure SUPABASE_URL e SUPABASE_KEY no Railway.');
     }
 
-    $updated = 0;
-    foreach (['usuario', 'login', 'utilizador'] as $column) {
+    $rows = supabase_request('PATCH', 'usuarios', ['senha' => $senha], [
+        'usuario' => 'ilike.' . $login,
+    ], true);
+
+    if ($rows) {
+        return;
+    }
+
+    foreach (['login', 'utilizador'] as $column) {
         $rows = supabase_request('PATCH', 'usuarios', ['senha' => $senha], [
             $column => 'ilike.' . $login,
         ], false);
-        $updated += count($rows);
+        if ($rows) {
+            return;
+        }
     }
 
-    if ($updated === 0) {
-        throw new RuntimeException('Nao foi possivel atualizar a senha no Supabase para o usuario ' . $login . '.');
-    }
+    throw new RuntimeException('Nao foi possivel atualizar a senha no Supabase para o usuario ' . $login . '.');
 }
 
 function supabase_upsert(string $table, array $row, string $onConflict = ''): array
