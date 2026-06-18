@@ -34,11 +34,13 @@ function handle_actions(): void
             SELECT
                 UNIDADE, CAIXA, TEMPORALIDADE, OBSERVACAO, PROCESSO, VOLUMES,
                 ASSUNTO, INTERESSADO, LOCALIZACAO, RESPONSAVEL, DATA, DATA_LIMITE,
-                TEXTO_GERAL
+                TEXTO_GERAL, FONTE_ARQUIVO
             FROM acervo
+            WHERE FONTE_ARQUIVO NOT LIKE :indicadores
             ORDER BY CAIXA, ASSUNTO
             ',
-            'export_inventario_padrao_row'
+            'export_inventario_padrao_row',
+            [':indicadores' => 'INDICADORES - 2026.xlsx%']
         );
     }
 

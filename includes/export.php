@@ -168,21 +168,57 @@ function export_first_filled(array $row, string $column, string $label = ''): st
     return export_clean_value((string) ($row[$column] ?? ''));
 }
 
+function export_source_file(array $row): string
+{
+    return (string) ($row['FONTE_ARQUIVO'] ?? '');
+}
+
+function export_document_type(array $row): string
+{
+    $source = normalize_search_text(export_source_file($row));
+    $observacao = export_first_filled($row, 'OBSERVACAO');
+    $processo = export_first_filled($row, 'PROCESSO');
+    $assunto = normalize_search_text(export_first_filled($row, 'ASSUNTO'));
+    $interessado = export_first_filled($row, 'INTERESSADO');
+
+    if (str_contains($source, 'pasta') || str_contains($source, 'rh') || str_contains($assunto, 'pasta funcional')) {
+        return 'PASTA FUNCIONAL';
+    }
+
+    if (str_starts_with($observacao, 'Cadastro manual - ')) {
+        return trim(substr($observacao, 18));
+    }
+
+    if ($observacao !== '' && !in_array($observacao, ['Importado de planilha', 'cadastro manual'], true)) {
+        return $observacao;
+    }
+
+    if ($processo !== '') {
+        return 'PROCESSOS';
+    }
+
+    if ($interessado !== '' && $assunto === '') {
+        return 'PASTA FUNCIONAL';
+    }
+
+    return 'DOCUMENTOS';
+}
+
+function export_responsavel(array $row): string
+{
+    $responsavel = export_first_filled($row, 'RESPONSAVEL');
+    return $responsavel === 'Importacao automatica' ? '' : $responsavel;
+}
+
 function export_inventario_padrao_row(array $row): array
 {
-    $tipo = export_first_filled($row, 'OBSERVACAO', 'TIPO DE DOCUMENTOS');
-    if (str_starts_with($tipo, 'Cadastro manual - ')) {
-        $tipo = trim(substr($tipo, 18));
-    }
-    if ($tipo === '') {
-        $tipo = export_first_filled($row, 'PROCESSO') !== '' ? 'PROCESSOS' : 'DOCUMENTOS';
-    }
+    $row['RESPONSAVEL'] = export_responsavel($row);
 
     return [
         'UNIDADES' => export_first_filled($row, 'UNIDADE', 'UNIDADES'),
         'Nº CAIXAS' => export_first_filled($row, 'CAIXA', 'Nº CAIXAS'),
         'Nº Cod Temp' => export_first_filled($row, 'TEMPORALIDADE', 'Nº Cod Temp'),
-        'TIPO DE DOCUMENTOS' => $tipo,
+        'TIPO DE DOCUMENTOS' => export_document_type($row),
         'Nº PROCESSOS' => export_first_filled($row, 'PROCESSO', 'Nº PROCESSOS'),
         'VOLUMES' => export_first_filled($row, 'VOLUMES', 'VOLUMES'),
         'ASSUNTOS' => export_first_filled($row, 'ASSUNTO', 'ASSUNTOS'),

@@ -107,7 +107,14 @@ function import_planilhas_on_login(bool $force = false): array
 function planilha_import_files(): array
 {
     $files = glob(PLANILHAS_DIR . DIRECTORY_SEPARATOR . '*.xlsx') ?: [];
-    return array_values(array_filter($files, fn ($file) => is_file($file) && !str_starts_with(basename($file), '~$')));
+    return array_values(array_filter($files, function ($file) {
+        $name = basename($file);
+        if (!is_file($file) || str_starts_with($name, '~$')) {
+            return false;
+        }
+
+        return !str_contains(normalize_search_text($name), 'indicadores');
+    }));
 }
 
 function planilhas_fingerprint(array $files): string
