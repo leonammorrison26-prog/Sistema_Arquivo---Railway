@@ -151,6 +151,12 @@ if (moreTrigger && moreMenu) {
     document.querySelector('[data-menu-action="clear-cache"]')?.addEventListener('click', clearLoginCache);
 }
 
+document.querySelectorAll('[data-dismiss-alert]').forEach((button) => {
+    button.addEventListener('click', () => {
+        button.closest('.dismissible-alert')?.remove();
+    });
+});
+
 document.querySelectorAll('.password-toggle').forEach((passwordToggle) => {
     passwordToggle.addEventListener('click', () => {
         const input = passwordToggle.closest('.password-field')?.querySelector('input');

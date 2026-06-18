@@ -662,6 +662,35 @@ label { display: grid; gap: 6px; color: var(--text); font-weight: 700; }
 .alert { padding: 12px 14px; border: 1px solid var(--border); background: #273244; border-radius: 10px; margin-bottom: 14px; }
 .alert.success { background: rgba(21, 128, 61, .25); border-color: rgba(34,197,94,.35); }
 .alert.danger { background: rgba(220, 38, 38, .25); }
+.dismissible-alert {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+}
+.dismissible-alert > span {
+    flex: 1;
+}
+.alert-close {
+    flex: 0 0 auto;
+    width: 28px;
+    height: 28px;
+    min-height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: none;
+    opacity: .8;
+}
+.alert-close:hover {
+    background: rgba(255, 255, 255, .12);
+    opacity: 1;
+}
 .empty-state { padding: 48px; text-align: center; color: var(--muted); border: 1px dashed var(--border); border-radius: 12px; }
 .result-card summary::-webkit-details-marker { display: none; }
 .result-card summary::marker { content: ""; }

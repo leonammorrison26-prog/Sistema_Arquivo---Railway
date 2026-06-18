@@ -77,14 +77,23 @@ function render_header(string $title = APP_NAME): void
                 </div>
             </header>
             <?php if (!supabase_enabled()): ?>
-                <div class="alert danger">Supabase obrigatorio nao configurado: <?= h(supabase_status()) ?></div>
+                <div class="alert danger dismissible-alert" role="alert">
+                    <span>Supabase obrigatorio nao configurado: <?= h(supabase_status()) ?></span>
+                    <button class="alert-close" type="button" aria-label="Fechar aviso" data-dismiss-alert>&times;</button>
+                </div>
             <?php endif; ?>
             <?php if (!empty($_SESSION['flash_error'])): ?>
-                <div class="alert danger"><?= h($_SESSION['flash_error']) ?></div>
+                <div class="alert danger dismissible-alert" role="alert">
+                    <span><?= h($_SESSION['flash_error']) ?></span>
+                    <button class="alert-close" type="button" aria-label="Fechar aviso" data-dismiss-alert>&times;</button>
+                </div>
                 <?php unset($_SESSION['flash_error']); ?>
             <?php endif; ?>
             <?php if (!empty($_SESSION['flash_success'])): ?>
-                <div class="alert success"><?= h($_SESSION['flash_success']) ?></div>
+                <div class="alert success dismissible-alert" role="status">
+                    <span><?= h($_SESSION['flash_success']) ?></span>
+                    <button class="alert-close" type="button" aria-label="Fechar aviso" data-dismiss-alert>&times;</button>
+                </div>
                 <?php unset($_SESSION['flash_success']); ?>
             <?php endif; ?>
     <?php
