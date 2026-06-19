@@ -1777,7 +1777,18 @@ th { color: white; background: rgba(255,255,255,.05); }
 }
 .user-actions {
     display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
     justify-content: flex-end;
+}
+.user-type-form {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+.user-type-form select {
+    min-height: 34px;
+    border-radius: 10px;
 }
 .docs-page {
     display: grid;

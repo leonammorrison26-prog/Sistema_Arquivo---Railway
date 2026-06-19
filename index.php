@@ -519,6 +519,15 @@ function render_usuarios(): void
                             </div>
                             <div class="user-actions">
                                 <?php if (strtoupper((string) $user['login']) !== 'ADMIN'): ?>
+                                    <form method="post" class="user-type-form">
+                                        <input type="hidden" name="action" value="update_user_type">
+                                        <input type="hidden" name="id" value="<?= (int) $user['id'] ?>">
+                                        <select name="tipo_usuario" aria-label="Tipo do usuario">
+                                            <option value="Servidor" <?= normalize_user_type((string) ($user['tipo_usuario'] ?? '')) === 'Servidor' ? 'selected' : '' ?>>Servidor</option>
+                                            <option value="Terceirizado" <?= normalize_user_type((string) ($user['tipo_usuario'] ?? '')) === 'Terceirizado' ? 'selected' : '' ?>>Terceirizado</option>
+                                        </select>
+                                        <button class="small" type="submit">Salvar tipo</button>
+                                    </form>
                                     <form method="post" onsubmit="return confirm('Excluir usuario?')">
                                         <input type="hidden" name="action" value="delete_user">
                                         <input type="hidden" name="id" value="<?= (int) $user['id'] ?>">

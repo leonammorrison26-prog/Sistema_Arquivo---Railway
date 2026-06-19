@@ -132,6 +132,11 @@ function handle_actions(): void
             redirect_to('gestao_usuarios');
         }
 
+        if ($action === 'update_user_type' && user_is_admin()) {
+            update_user_type();
+            redirect_to('gestao_usuarios');
+        }
+
         if ($action === 'delete_user' && user_is_admin()) {
             $id = (int) ($_POST['id'] ?? 0);
             if ($id > 0) {
@@ -426,7 +431,7 @@ function save_user(): void
         ':nome' => trim($_POST['nome'] ?? ''),
         ':login' => trim($_POST['login'] ?? ''),
         ':senha' => $_POST['senha'] ?? '',
-        ':tipo_usuario' => $_POST['tipo_usuario'] ?? 'Servidor',
+        ':tipo_usuario' => normalize_user_type($_POST['tipo_usuario'] ?? 'Servidor'),
         ':departamento' => $_POST['departamento'] ?? 'DIARQ',
         ':p_extrair_excel' => isset($_POST['p_extrair_excel']) ? 1 : 0,
         ':p_sincronizar' => isset($_POST['p_sincronizar']) ? 1 : 0,
@@ -463,6 +468,44 @@ function save_user(): void
     ")->execute($data);
 }
 
+function update_user_type(): void
+{
+    $id = (int) ($_POST['id'] ?? 0);
+    $tipoUsuario = normalize_user_type($_POST['tipo_usuario'] ?? 'Servidor');
+    if ($id <= 0) {
+        throw new RuntimeException('Usuario invalido.');
+    }
+
+    $stmt = db()->prepare('SELECT * FROM usuarios WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
+    $user = $stmt->fetch();
+    if (!$user) {
+        throw new RuntimeException('Usuario nao encontrado.');
+    }
+
+    if (strtoupper((string) ($user['login'] ?? '')) === 'ADMIN') {
+        throw new RuntimeException('O usuario ADMIN nao pode ser alterado por aqui.');
+    }
+
+    $data = [
+        ':nome' => $user['nome'] ?? '',
+        ':login' => $user['login'] ?? '',
+        ':senha' => $user['senha'] ?? '',
+        ':tipo_usuario' => $tipoUsuario,
+        ':p_gerir_usuarios' => (int) ($user['p_gerir_usuarios'] ?? 0),
+    ];
+    supabase_upsert('usuarios', supabase_user_payload($data), 'usuario');
+
+    db()->prepare('UPDATE usuarios SET tipo_usuario = :tipo_usuario WHERE id = :id')
+        ->execute([':tipo_usuario' => $tipoUsuario, ':id' => $id]);
+
+    if ((int) ($_SESSION['user']['id'] ?? 0) === $id) {
+        $_SESSION['user']['tipo_usuario'] = $tipoUsuario;
+    }
+
+    $_SESSION['flash_success'] = 'Tipo de usuario atualizado.';
+}
+
 function supabase_acervo_payload(array $row): array
 {
     return [
@@ -488,6 +531,6 @@ function supabase_user_payload(array $data): array
         'nome' => $data[':nome'],
         'usuario' => $data[':login'],
         'senha' => $data[':senha'],
-        'perfil' => ((int) $data[':p_gerir_usuarios'] === 1) ? 'admin' : 'operador',
+        'perfil' => supabase_user_profile((int) $data[':p_gerir_usuarios'], (string) ($data[':tipo_usuario'] ?? 'Servidor')),
     ];
 }

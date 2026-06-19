@@ -60,6 +60,41 @@ function user_is_admin(?array $user = null): bool
     return strtoupper((string) ($user['login'] ?? '')) === 'ADMIN' || (int) ($user['p_gerir_usuarios'] ?? 0) === 1;
 }
 
+function normalize_user_type(string $type): string
+{
+    $type = trim($type);
+    $normalized = strtolower(strtr($type, [
+        'á' => 'a', 'à' => 'a', 'â' => 'a', 'ã' => 'a',
+        'é' => 'e', 'ê' => 'e',
+        'í' => 'i',
+        'ó' => 'o', 'ô' => 'o', 'õ' => 'o',
+        'ú' => 'u',
+        'ç' => 'c',
+    ]));
+
+    return str_contains($normalized, 'terceir') || str_contains($normalized, 'tercer')
+        ? 'Terceirizado'
+        : 'Servidor';
+}
+
+function supabase_user_profile(int $isAdmin, string $type): string
+{
+    $profile = $isAdmin === 1 ? 'admin' : 'operador';
+    return $profile . '|' . normalize_user_type($type);
+}
+
+function parse_supabase_user_profile(string $profile): array
+{
+    $parts = array_map('trim', explode('|', $profile, 2));
+    $role = strtolower($parts[0] ?? '');
+    $type = $parts[1] ?? '';
+
+    return [
+        'is_admin' => $role === 'admin',
+        'tipo_usuario' => $type !== '' ? normalize_user_type($type) : 'Servidor',
+    ];
+}
+
 function find_logo(): ?string
 {
     $names = ['LOGO_MDS.png', 'brasao.png.png', 'brasao.png', 'LOGO_DIARQ.png', 'image_4.png', 'brasao.jpg'];

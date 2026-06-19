@@ -152,16 +152,17 @@ function sync_app_data(bool $forcePlanilhas = false): array
 
 function normalize_remote_user(array $row): array
 {
+    $profile = parse_supabase_user_profile((string) ($row['perfil'] ?? ''));
     return [
         'id' => $row['id'] ?? null,
         'nome' => $row['nome'] ?? 'Sem Nome',
         'login' => $row['login'] ?? $row['utilizador'] ?? $row['usuario'] ?? '',
         'senha' => $row['senha'] ?? '',
-        'tipo_usuario' => $row['tipo_usuario'] ?? $row['tipo'] ?? 'Servidor',
+        'tipo_usuario' => normalize_user_type((string) ($row['tipo_usuario'] ?? $row['tipo'] ?? $profile['tipo_usuario'])),
         'departamento' => $row['departamento'] ?? $row['depto'] ?? 'DIARQ',
         'p_extrair_excel' => (int) ($row['p_extrair_excel'] ?? 0),
         'p_sincronizar' => (int) ($row['p_sincronizar'] ?? 0),
-        'p_gerir_usuarios' => (int) ($row['p_gerir_usuarios'] ?? (strtolower((string) ($row['perfil'] ?? '')) === 'admin' ? 1 : 0)),
+        'p_gerir_usuarios' => (int) ($row['p_gerir_usuarios'] ?? ($profile['is_admin'] ? 1 : 0)),
         'p_cadastrar_caixa' => (int) ($row['p_cadastrar_caixa'] ?? 0),
         'p_somente_pesquisa' => (int) ($row['p_somente_pesquisa'] ?? 0),
         'p_botao_editar' => (int) ($row['p_botao_editar'] ?? 0),
