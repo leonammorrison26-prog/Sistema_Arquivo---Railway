@@ -448,7 +448,7 @@ a { color: inherit; }
     overflow-x: hidden;
     background: #0b0e14;
 }
-.main > *:not(.acervo-summary) {
+.main > *:not(.acervo-summary):not(.sei-home-card) {
     width: min(100%, var(--content-max));
     margin-left: auto;
     margin-right: auto;
@@ -1552,15 +1552,15 @@ th { color: white; background: rgba(255,255,255,.05); }
 }
 .sei-home-card {
     position: fixed;
-    right: clamp(12px, 2vw, 24px);
-    bottom: 12px;
-    z-index: 30;
-    width: min(300px, calc(100vw - 28px));
+    right: clamp(14px, 2vw, 26px);
+    bottom: 14px;
+    z-index: 40;
+    width: min(230px, calc(100vw - 28px));
     display: grid;
-    gap: 8px;
-    padding: 14px;
-    border: 2px solid #0ea5e9;
-    border-radius: 14px;
+    gap: 6px;
+    padding: 11px 12px;
+    border: 1px solid #0ea5e9;
+    border-radius: 12px;
     background: rgba(15, 23, 42, .94);
     box-shadow: 0 18px 40px rgba(0, 0, 0, .22);
 }
@@ -1570,17 +1570,18 @@ th { color: white; background: rgba(255,255,255,.05); }
 .sei-home-title {
     color: #e0f2fe;
     font-weight: 950;
-    font-size: 1rem;
+    font-size: .9rem;
 }
 .sei-home-card > span:not(.sei-home-title),
 .sei-home-meta {
     color: #cbd5e1;
-    font-size: .82rem;
+    font-size: .72rem;
     font-weight: 800;
 }
 .sei-home-card strong {
     color: #fff;
-    font-size: 1rem;
+    font-size: .88rem;
+    line-height: 1.2;
 }
 .sei-home-next {
     text-transform: uppercase;
@@ -1589,17 +1590,19 @@ th { color: white; background: rgba(255,255,255,.05); }
 .sei-home-form {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 8px;
+    gap: 6px;
 }
 .sei-home-form input {
-    min-height: 38px;
-    border-radius: 8px;
-    font-size: .9rem;
+    min-height: 32px;
+    border-radius: 7px;
+    padding: 6px 8px;
+    font-size: .78rem;
 }
 .sei-home-form button {
-    min-height: 38px;
-    border-radius: 8px;
-    padding-inline: 12px;
+    min-height: 32px;
+    border-radius: 7px;
+    padding: 6px 9px;
+    font-size: .8rem;
 }
 .sei-home-meta {
     display: flex;
@@ -1609,19 +1612,19 @@ th { color: white; background: rgba(255,255,255,.05); }
 .sei-home-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
     padding-top: 4px;
 }
 .sei-home-actions a,
 .sei-home-actions button {
-    min-height: 30px;
-    padding: 5px 9px;
-    border-radius: 8px;
+    min-height: 26px;
+    padding: 4px 8px;
+    border-radius: 7px;
     border: 1px solid rgba(125, 211, 252, .32);
     background: rgba(14, 165, 233, .12);
     color: #e0f2fe;
-    font-size: .78rem;
+    font-size: .72rem;
     font-weight: 850;
     text-decoration: none;
 }
@@ -3422,11 +3425,6 @@ body.theme-dark .sidebar {
     .dashboard-card.wide {
         grid-column: auto;
     }
-    .sei-home-card {
-        position: static;
-        width: 100%;
-        margin-bottom: 16px;
-    }
     .sei-demand-form {
         grid-template-columns: 1fr;
     }
@@ -3653,6 +3651,11 @@ body.theme-dark .sidebar {
     .acervo-summary {
         gap: 6px;
         padding: 10px 6px;
+    }
+    .sei-home-card {
+        position: static;
+        width: 100%;
+        margin-bottom: 14px;
     }
     .summary-item strong {
         font-size: 1.1rem;
