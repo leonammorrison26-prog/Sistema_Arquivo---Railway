@@ -519,15 +519,6 @@ function render_usuarios(): void
                             </div>
                             <div class="user-actions">
                                 <?php if (strtoupper((string) $user['login']) !== 'ADMIN'): ?>
-                                    <form method="post" class="user-type-form">
-                                        <input type="hidden" name="action" value="update_user_type">
-                                        <input type="hidden" name="id" value="<?= (int) $user['id'] ?>">
-                                        <select name="tipo_usuario" aria-label="Tipo do usuario">
-                                            <option value="Servidor" <?= normalize_user_type((string) ($user['tipo_usuario'] ?? '')) === 'Servidor' ? 'selected' : '' ?>>Servidor</option>
-                                            <option value="Terceirizado" <?= normalize_user_type((string) ($user['tipo_usuario'] ?? '')) === 'Terceirizado' ? 'selected' : '' ?>>Terceirizado</option>
-                                        </select>
-                                        <button class="small" type="submit">Salvar tipo</button>
-                                    </form>
                                     <form method="post" onsubmit="return confirm('Excluir usuario?')">
                                         <input type="hidden" name="action" value="delete_user">
                                         <input type="hidden" name="id" value="<?= (int) $user['id'] ?>">
@@ -537,6 +528,40 @@ function render_usuarios(): void
                                     <span class="admin-lock">Protegido</span>
                                 <?php endif; ?>
                             </div>
+                            <?php if (strtoupper((string) $user['login']) !== 'ADMIN'): ?>
+                                <details class="user-edit-details">
+                                    <summary>Alterar cadastro</summary>
+                                    <form method="post" class="user-edit-form">
+                                        <input type="hidden" name="action" value="save_user">
+                                        <input type="hidden" name="id" value="<?= (int) $user['id'] ?>">
+                                        <input type="hidden" name="setores_permitidos" value="<?= h($user['setores_permitidos'] ?? '') ?>">
+
+                                        <label>Nome completo <input name="nome" value="<?= h($user['nome'] ?? '') ?>" required></label>
+                                        <label>Login <input name="login" value="<?= h($user['login'] ?? '') ?>" required></label>
+                                        <label>Senha <input name="senha" value="<?= h($user['senha'] ?? '') ?>" required></label>
+                                        <label>Tipo
+                                            <select name="tipo_usuario">
+                                                <option value="Servidor" <?= normalize_user_type((string) ($user['tipo_usuario'] ?? '')) === 'Servidor' ? 'selected' : '' ?>>Servidor</option>
+                                                <option value="Terceirizado" <?= normalize_user_type((string) ($user['tipo_usuario'] ?? '')) === 'Terceirizado' ? 'selected' : '' ?>>Terceirizado</option>
+                                            </select>
+                                        </label>
+                                        <label class="span-2">Setor <input name="departamento" value="<?= h($user['departamento'] ?? 'DIARQ') ?>"></label>
+
+                                        <div class="permission-grid span-2">
+                                            <label class="permission-item"><input type="checkbox" name="p_gerir_usuarios" <?= (int) ($user['p_gerir_usuarios'] ?? 0) === 1 ? 'checked' : '' ?>><span>Gerir usu&aacute;rios</span></label>
+                                            <label class="permission-item"><input type="checkbox" name="p_sincronizar" <?= (int) ($user['p_sincronizar'] ?? 0) === 1 ? 'checked' : '' ?>><span>Sincronizar</span></label>
+                                            <label class="permission-item"><input type="checkbox" name="p_cadastrar_caixa" <?= (int) ($user['p_cadastrar_caixa'] ?? 0) === 1 ? 'checked' : '' ?>><span>Cadastrar caixa</span></label>
+                                            <label class="permission-item"><input type="checkbox" name="p_botao_editar" <?= (int) ($user['p_botao_editar'] ?? 0) === 1 ? 'checked' : '' ?>><span>Editar acervo</span></label>
+                                            <label class="permission-item"><input type="checkbox" name="p_emprestimo" <?= (int) ($user['p_emprestimo'] ?? 0) === 1 ? 'checked' : '' ?>><span>Empr&eacute;stimo</span></label>
+                                            <label class="permission-item"><input type="checkbox" name="TROCAR_SENHA" <?= (int) ($user['TROCAR_SENHA'] ?? 0) === 1 ? 'checked' : '' ?>><span>Trocar senha no primeiro acesso</span></label>
+                                        </div>
+
+                                        <div class="form-actions span-2">
+                                            <button class="primary small" type="submit">Alterar cadastro</button>
+                                        </div>
+                                    </form>
+                                </details>
+                            <?php endif; ?>
                         </article>
                     <?php endforeach; ?>
                 </div>

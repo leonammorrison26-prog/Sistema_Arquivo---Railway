@@ -132,11 +132,6 @@ function handle_actions(): void
             redirect_to('gestao_usuarios');
         }
 
-        if ($action === 'update_user_type' && user_is_admin()) {
-            update_user_type();
-            redirect_to('gestao_usuarios');
-        }
-
         if ($action === 'delete_user' && user_is_admin()) {
             $id = (int) ($_POST['id'] ?? 0);
             if ($id > 0) {
@@ -427,25 +422,42 @@ function save_indicadores(): void
 function save_user(): void
 {
     $id = (int) ($_POST['id'] ?? 0);
+    $currentUser = [];
+    if ($id > 0) {
+        $stmt = db()->prepare('SELECT * FROM usuarios WHERE id = :id LIMIT 1');
+        $stmt->execute([':id' => $id]);
+        $currentUser = $stmt->fetch() ?: [];
+        if (!$currentUser) {
+            throw new RuntimeException('Usuario nao encontrado.');
+        }
+        if (strtoupper((string) ($currentUser['login'] ?? '')) === 'ADMIN') {
+            throw new RuntimeException('O usuario ADMIN nao pode ser alterado por aqui.');
+        }
+    }
+
     $data = [
         ':nome' => trim($_POST['nome'] ?? ''),
         ':login' => trim($_POST['login'] ?? ''),
         ':senha' => $_POST['senha'] ?? '',
         ':tipo_usuario' => normalize_user_type($_POST['tipo_usuario'] ?? 'Servidor'),
         ':departamento' => $_POST['departamento'] ?? 'DIARQ',
-        ':p_extrair_excel' => isset($_POST['p_extrair_excel']) ? 1 : 0,
+        ':p_extrair_excel' => isset($_POST['p_extrair_excel']) ? 1 : (int) ($currentUser['p_extrair_excel'] ?? 0),
         ':p_sincronizar' => isset($_POST['p_sincronizar']) ? 1 : 0,
         ':p_gerir_usuarios' => isset($_POST['p_gerir_usuarios']) ? 1 : 0,
         ':p_cadastrar_caixa' => isset($_POST['p_cadastrar_caixa']) ? 1 : 0,
-        ':p_somente_pesquisa' => isset($_POST['p_somente_pesquisa']) ? 1 : 0,
+        ':p_somente_pesquisa' => isset($_POST['p_somente_pesquisa']) ? 1 : (int) ($currentUser['p_somente_pesquisa'] ?? 0),
         ':p_botao_editar' => isset($_POST['p_botao_editar']) ? 1 : 0,
         ':p_emprestimo' => isset($_POST['p_emprestimo']) ? 1 : 0,
-        ':setores_permitidos' => $_POST['setores_permitidos'] ?? '',
+        ':setores_permitidos' => $_POST['setores_permitidos'] ?? ($currentUser['setores_permitidos'] ?? ''),
         ':TROCAR_SENHA' => isset($_POST['TROCAR_SENHA']) ? 1 : 0,
     ];
 
     if ($id > 0) {
         supabase_upsert('usuarios', supabase_user_payload($data), 'usuario');
+        $oldLogin = trim((string) ($currentUser['login'] ?? ''));
+        if ($oldLogin !== '' && strcasecmp($oldLogin, (string) $data[':login']) !== 0) {
+            supabase_request('DELETE', 'usuarios', [], ['usuario' => 'eq.' . $oldLogin], false);
+        }
         $data[':id'] = $id;
         db()->prepare("
             UPDATE usuarios SET
@@ -455,6 +467,25 @@ function save_user(): void
                 p_emprestimo = :p_emprestimo, setores_permitidos = :setores_permitidos, TROCAR_SENHA = :TROCAR_SENHA
             WHERE id = :id
         ")->execute($data);
+        if ((int) ($_SESSION['user']['id'] ?? 0) === $id) {
+            $_SESSION['user'] = array_merge($_SESSION['user'], [
+                'nome' => $data[':nome'],
+                'login' => $data[':login'],
+                'senha' => $data[':senha'],
+                'tipo_usuario' => $data[':tipo_usuario'],
+                'departamento' => $data[':departamento'],
+                'p_extrair_excel' => $data[':p_extrair_excel'],
+                'p_sincronizar' => $data[':p_sincronizar'],
+                'p_gerir_usuarios' => $data[':p_gerir_usuarios'],
+                'p_cadastrar_caixa' => $data[':p_cadastrar_caixa'],
+                'p_somente_pesquisa' => $data[':p_somente_pesquisa'],
+                'p_botao_editar' => $data[':p_botao_editar'],
+                'p_emprestimo' => $data[':p_emprestimo'],
+                'setores_permitidos' => $data[':setores_permitidos'],
+                'TROCAR_SENHA' => $data[':TROCAR_SENHA'],
+            ]);
+        }
+        $_SESSION['flash_success'] = 'Cadastro de usuario atualizado.';
         return;
     }
 
@@ -466,44 +497,6 @@ function save_user(): void
         VALUES
             (:nome, :login, :senha, :tipo_usuario, :departamento, :p_extrair_excel, :p_sincronizar, :p_gerir_usuarios, :p_cadastrar_caixa, :p_somente_pesquisa, :p_botao_editar, :p_emprestimo, :setores_permitidos, :TROCAR_SENHA)
     ")->execute($data);
-}
-
-function update_user_type(): void
-{
-    $id = (int) ($_POST['id'] ?? 0);
-    $tipoUsuario = normalize_user_type($_POST['tipo_usuario'] ?? 'Servidor');
-    if ($id <= 0) {
-        throw new RuntimeException('Usuario invalido.');
-    }
-
-    $stmt = db()->prepare('SELECT * FROM usuarios WHERE id = :id LIMIT 1');
-    $stmt->execute([':id' => $id]);
-    $user = $stmt->fetch();
-    if (!$user) {
-        throw new RuntimeException('Usuario nao encontrado.');
-    }
-
-    if (strtoupper((string) ($user['login'] ?? '')) === 'ADMIN') {
-        throw new RuntimeException('O usuario ADMIN nao pode ser alterado por aqui.');
-    }
-
-    $data = [
-        ':nome' => $user['nome'] ?? '',
-        ':login' => $user['login'] ?? '',
-        ':senha' => $user['senha'] ?? '',
-        ':tipo_usuario' => $tipoUsuario,
-        ':p_gerir_usuarios' => (int) ($user['p_gerir_usuarios'] ?? 0),
-    ];
-    supabase_upsert('usuarios', supabase_user_payload($data), 'usuario');
-
-    db()->prepare('UPDATE usuarios SET tipo_usuario = :tipo_usuario WHERE id = :id')
-        ->execute([':tipo_usuario' => $tipoUsuario, ':id' => $id]);
-
-    if ((int) ($_SESSION['user']['id'] ?? 0) === $id) {
-        $_SESSION['user']['tipo_usuario'] = $tipoUsuario;
-    }
-
-    $_SESSION['flash_success'] = 'Tipo de usuario atualizado.';
 }
 
 function supabase_acervo_payload(array $row): array
