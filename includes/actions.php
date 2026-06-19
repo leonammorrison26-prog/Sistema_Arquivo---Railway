@@ -111,6 +111,11 @@ function handle_actions(): void
             redirect_to($_POST['return_page'] ?? 'busca');
         }
 
+        if ($action === 'skip_sei_demanda' && user_is_admin()) {
+            skip_sei_demanda();
+            redirect_to($_POST['return_page'] ?? 'rel_demanda_sei');
+        }
+
         if ($action === 'save_manual_processos') {
             save_manual_processos();
             redirect_to('cad_processo');
@@ -208,8 +213,8 @@ function save_sei_demanda(): void
 
     $process = normalize_sei_process((string) ($_POST['processo'] ?? ''));
     db()->prepare("
-        INSERT INTO sei_atendimentos (usuario_id, usuario_login, usuario_nome, processo, criado_em)
-        VALUES (:usuario_id, :usuario_login, :usuario_nome, :processo, :criado_em)
+        INSERT INTO sei_atendimentos (usuario_id, usuario_login, usuario_nome, processo, status, criado_em)
+        VALUES (:usuario_id, :usuario_login, :usuario_nome, :processo, 'atendido', :criado_em)
     ")->execute([
         ':usuario_id' => (int) ($user['id'] ?? 0),
         ':usuario_login' => (string) ($user['login'] ?? ''),
@@ -221,6 +226,39 @@ function save_sei_demanda(): void
     $nextState = sei_queue_state($user);
     $_SESSION['flash_success'] = 'Atendimento SEI registrado. Proxima demanda: '
         . (string) ($nextState['next']['nome'] ?? 'fila atualizada') . '.';
+}
+
+function skip_sei_demanda(): void
+{
+    $admin = $_SESSION['user'] ?? [];
+    $state = sei_queue_state($admin);
+    $next = $state['next'] ?? null;
+    if (!$next) {
+        throw new RuntimeException('Nao ha terceirizado na fila para pular.');
+    }
+
+    $expectedLogin = trim((string) ($_POST['usuario_login'] ?? ''));
+    if ($expectedLogin === '' || strcasecmp($expectedLogin, (string) ($next['login'] ?? '')) !== 0) {
+        throw new RuntimeException('A fila mudou. Atualize a pagina antes de pular a vez.');
+    }
+
+    db()->prepare("
+        INSERT INTO sei_atendimentos
+            (usuario_id, usuario_login, usuario_nome, processo, status, pulado_por_login, pulado_por_nome, criado_em)
+        VALUES
+            (:usuario_id, :usuario_login, :usuario_nome, 'PULADO', 'pulado', :pulado_por_login, :pulado_por_nome, :criado_em)
+    ")->execute([
+        ':usuario_id' => (int) ($next['id'] ?? 0),
+        ':usuario_login' => (string) ($next['login'] ?? ''),
+        ':usuario_nome' => (string) ($next['nome'] ?? ''),
+        ':pulado_por_login' => (string) ($admin['login'] ?? ''),
+        ':pulado_por_nome' => (string) ($admin['nome'] ?? ''),
+        ':criado_em' => date('Y-m-d H:i:s'),
+    ]);
+
+    $newState = sei_queue_state($admin);
+    $_SESSION['flash_success'] = 'Vez de ' . (string) ($next['nome'] ?: $next['login'])
+        . ' pulada. Proxima demanda: ' . (string) ($newState['next']['nome'] ?? 'fila atualizada') . '.';
 }
 
 function planilha_export_rows(): array

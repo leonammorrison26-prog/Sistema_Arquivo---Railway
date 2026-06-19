@@ -142,6 +142,9 @@ function migrate_db(PDO $pdo): void
         'usuario_login' => "TEXT NOT NULL DEFAULT ''",
         'usuario_nome' => "TEXT NOT NULL DEFAULT ''",
         'processo' => "TEXT NOT NULL DEFAULT ''",
+        'status' => "TEXT NOT NULL DEFAULT 'atendido'",
+        'pulado_por_login' => "TEXT NOT NULL DEFAULT ''",
+        'pulado_por_nome' => "TEXT NOT NULL DEFAULT ''",
         'criado_em' => "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
     ]);
 

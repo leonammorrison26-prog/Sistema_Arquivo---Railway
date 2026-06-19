@@ -118,9 +118,11 @@ function render_sei_queue_widget(): void
                 <strong><?= h((string) $state['position']) ?>/<?= h((string) $state['total']) ?></strong>
             </div>
             <div>
-                <span>&Uacute;ltimo atendimento</span>
+                <span>&Uacute;ltimo movimento</span>
                 <strong><?= h((string) ($last['usuario_nome'] ?? 'Ainda sem registro')) ?></strong>
-                <?php if ($last): ?><small><?= h((string) $last['processo']) ?></small><?php endif; ?>
+                <?php if ($last): ?>
+                    <small><?= ($last['status'] ?? 'atendido') === 'pulado' ? 'Vez pulada' : h((string) $last['processo']) ?></small>
+                <?php endif; ?>
             </div>
             <div>
                 <span>Depois</span>
@@ -1140,7 +1142,7 @@ function render_rel_demanda_sei(): void
             <article class="kpi-card accent-blue"><span>Atendimentos</span><strong><?= h(number_format($data['total'], 0, ',', '.')) ?></strong><small><?= h($data['periods'][$period]['label']) ?></small></article>
             <article class="kpi-card accent-cyan"><span>Hoje</span><strong><?= h((string) $data['today']) ?></strong><small>processos registrados</small></article>
             <article class="kpi-card accent-green"><span>7 dias</span><strong><?= h((string) $data['week']) ?></strong><small>ritmo recente</small></article>
-            <article class="kpi-card accent-red"><span>Atendentes</span><strong><?= h((string) $data['attendants']) ?></strong><small>com registro no per&iacute;odo</small></article>
+            <article class="kpi-card accent-red"><span>Vezes puladas</span><strong><?= h((string) $data['skipped']) ?></strong><small>avan&ccedil;os feitos por admin</small></article>
         </div>
 
         <section class="sei-flow-card">
@@ -1148,6 +1150,14 @@ function render_rel_demanda_sei(): void
                 <span class="eyebrow">Fila atual</span>
                 <h3><?= h((string) ($queue['next']['nome'] ?? 'Sem terceirizados na fila')) ?></h3>
                 <p>Pr&oacute;ximo atendimento liberado pelo rod&iacute;zio alfab&eacute;tico.</p>
+                <?php if (user_is_admin() && $queue['next']): ?>
+                    <form method="post" class="sei-skip-form" onsubmit="return confirm('Pular a vez deste usuario na demanda SEI?')">
+                        <input type="hidden" name="action" value="skip_sei_demanda">
+                        <input type="hidden" name="return_page" value="rel_demanda_sei">
+                        <input type="hidden" name="usuario_login" value="<?= h((string) $queue['next']['login']) ?>">
+                        <button class="danger small" type="submit">Pular vez</button>
+                    </form>
+                <?php endif; ?>
             </div>
             <div class="sei-flow-steps">
                 <?php foreach ($queue['users'] as $index => $user): ?>

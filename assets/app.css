@@ -1661,6 +1661,9 @@ th { color: white; background: rgba(255,255,255,.05); }
     color: #cbd5e1;
     margin: 8px 0 0;
 }
+.sei-skip-form {
+    margin-top: 12px;
+}
 .sei-flow-steps {
     display: flex;
     gap: 8px;

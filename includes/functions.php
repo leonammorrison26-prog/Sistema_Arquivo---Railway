@@ -121,7 +121,7 @@ function sei_queue_state(?array $currentUser = null): array
     $total = count($users);
 
     $last = db()->query("
-        SELECT usuario_login, usuario_nome, processo, criado_em
+        SELECT usuario_login, usuario_nome, processo, status, pulado_por_nome, criado_em
         FROM sei_atendimentos
         ORDER BY datetime(criado_em) DESC, id DESC
         LIMIT 1
@@ -192,10 +192,10 @@ function sei_report_data(array $input = []): array
         $period = '30d';
     }
 
-    $where = '';
+    $where = "WHERE status = 'atendido'";
     $params = [];
     if ($allowedPeriods[$period]['modifier'] !== null) {
-        $where = 'WHERE datetime(criado_em) >= datetime(:start)';
+        $where .= ' AND datetime(criado_em) >= datetime(:start)';
         $params[':start'] = $period === 'today' ? date('Y-m-d 00:00:00') : date('Y-m-d H:i:s', strtotime($allowedPeriods[$period]['modifier']));
     }
 
@@ -203,8 +203,9 @@ function sei_report_data(array $input = []): array
     $totalStmt->execute($params);
     $total = (int) $totalStmt->fetchColumn();
 
-    $today = (int) db()->query("SELECT COUNT(*) FROM sei_atendimentos WHERE date(criado_em) = date('now', 'localtime')")->fetchColumn();
-    $week = (int) db()->query("SELECT COUNT(*) FROM sei_atendimentos WHERE datetime(criado_em) >= datetime('now', '-7 days')")->fetchColumn();
+    $today = (int) db()->query("SELECT COUNT(*) FROM sei_atendimentos WHERE status = 'atendido' AND date(criado_em) = date('now', 'localtime')")->fetchColumn();
+    $week = (int) db()->query("SELECT COUNT(*) FROM sei_atendimentos WHERE status = 'atendido' AND datetime(criado_em) >= datetime('now', '-7 days')")->fetchColumn();
+    $skipped = (int) db()->query("SELECT COUNT(*) FROM sei_atendimentos WHERE status = 'pulado'")->fetchColumn();
 
     $attendantsStmt = db()->prepare("SELECT COUNT(DISTINCT usuario_login) FROM sei_atendimentos {$where}");
     $attendantsStmt->execute($params);
@@ -245,6 +246,7 @@ function sei_report_data(array $input = []): array
         'total' => $total,
         'today' => $today,
         'week' => $week,
+        'skipped' => $skipped,
         'attendants' => $attendants,
         'queue' => sei_queue_state(),
         'ranking' => $rankingStmt->fetchAll(),
