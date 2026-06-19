@@ -289,6 +289,7 @@ function render_sidebar(): void
                 <div class="nav-submenu">
                     <a class="side-button sub-button" href="/?export=acervo" title="Relatório Geral do Acervo"><?= side_icon('download') ?><span class="side-label">Relatório Geral do Acervo</span></a>
                     <?php sidebar_link('rel_indicadores', 'Relatório Indicadores', 'chart'); ?>
+                    <?php sidebar_link('rel_demanda_sei', 'Relatorio Demanda SEI', 'chart'); ?>
                     <?php sidebar_link('dashboard', 'Dashboard', 'dashboard'); ?>
                 </div>
             </details>

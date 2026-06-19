@@ -30,6 +30,7 @@ match ($page) {
     'dashboard' => render_dashboard(),
     'rel_temporalidade' => render_rel_temporalidade(),
     'rel_indicadores' => render_rel_indicadores(),
+    'rel_demanda_sei' => render_rel_demanda_sei(),
     'assistente_openai' => render_assistente(),
     default => render_busca(),
 };
@@ -53,6 +54,9 @@ function render_busca(): void
     ];
     $term = trim($_GET['q'] ?? '');
     $results = $term !== '' ? search_acervo($term, $scope) : [];
+    if (user_is_terceirizado()) {
+        render_sei_queue_widget();
+    }
     ?>
     <section class="panel">
         <nav class="tabs">
@@ -77,6 +81,55 @@ function render_busca(): void
         <div class="alert success"><?= count($results) ?> item(ns) encontrado(s). Mostrando os primeiros 100 resultados.</div>
         <?php foreach ($results as $row): render_acervo_card($row); endforeach; ?>
     <?php endif;
+}
+
+function render_sei_queue_widget(): void
+{
+    $state = sei_queue_state($_SESSION['user'] ?? []);
+    $next = $state['next'];
+    $last = $state['last'];
+    $afterNext = $state['after_next'];
+    ?>
+    <section class="sei-demand-card <?= $state['is_turn'] ? 'is-your-turn' : '' ?>">
+        <div class="sei-demand-orb"><?= app_icon('send') ?></div>
+        <div class="sei-demand-main">
+            <span class="eyebrow">Demanda SEI</span>
+            <?php if (!$next): ?>
+                <h2>Fila aguardando terceirizados</h2>
+                <p>Cadastre usuários como terceirizados para ativar o rodízio de atendimentos.</p>
+            <?php elseif ($state['is_turn']): ?>
+                <h2>Pr&oacute;xima demanda do SEI &eacute; sua!</h2>
+                <p>Registre o processo atendido para liberar automaticamente o pr&oacute;ximo colega da fila.</p>
+                <form method="post" class="sei-demand-form">
+                    <input type="hidden" name="action" value="save_sei_demanda">
+                    <input type="hidden" name="return_page" value="busca">
+                    <input name="processo" inputmode="numeric" placeholder="00000.00000/0000-00" pattern="\d{5}\.\d{5}/\d{4}-\d{2}" required>
+                    <button class="primary" type="submit">OK</button>
+                </form>
+            <?php else: ?>
+                <h2>Pr&oacute;xima demanda do SEI</h2>
+                <p class="sei-next-name"><?= h($next['nome'] ?: $next['login']) ?></p>
+                <span class="sei-waiting">Sua vez chega assim que o atendimento atual for registrado.</span>
+            <?php endif; ?>
+        </div>
+        <aside class="sei-demand-side">
+            <div>
+                <span>Posi&ccedil;&atilde;o</span>
+                <strong><?= h((string) $state['position']) ?>/<?= h((string) $state['total']) ?></strong>
+            </div>
+            <div>
+                <span>&Uacute;ltimo atendimento</span>
+                <strong><?= h((string) ($last['usuario_nome'] ?? 'Ainda sem registro')) ?></strong>
+                <?php if ($last): ?><small><?= h((string) $last['processo']) ?></small><?php endif; ?>
+            </div>
+            <div>
+                <span>Depois</span>
+                <strong><?= h((string) ($afterNext['nome'] ?? 'Fila reinicia')) ?></strong>
+            </div>
+            <a class="button" href="/?page=rel_demanda_sei">Relat&oacute;rio Demanda SEI</a>
+        </aside>
+    </section>
+    <?php
 }
 
 function render_acervo_card(array $row): void
@@ -1050,6 +1103,119 @@ function render_rel_indicadores(): void
                 </article>
             </section>
         <?php endif; ?>
+    </section>
+    <?php
+}
+
+function render_rel_demanda_sei(): void
+{
+    $data = sei_report_data($_GET);
+    $period = $data['period'];
+    $queue = $data['queue'];
+    $maxRanking = 1;
+    foreach ($data['ranking'] as $row) {
+        $maxRanking = max($maxRanking, (int) ($row['total'] ?? 0));
+    }
+    ?>
+    <section class="sei-report-page">
+        <div class="dashboard-hero sei-report-hero">
+            <div>
+                <span class="eyebrow">Relat&oacute;rio Demanda SEI</span>
+                <h2>Atendimentos SEI</h2>
+                <p>Rod&iacute;zio dos terceirizados, processos atendidos e produtividade do atendimento.</p>
+            </div>
+            <form class="sei-period-form" method="get">
+                <input type="hidden" name="page" value="rel_demanda_sei">
+                <label>Per&iacute;odo
+                    <select name="periodo" onchange="this.form.submit()">
+                        <?php foreach ($data['periods'] as $key => $info): ?>
+                            <option value="<?= h($key) ?>" <?= $period === $key ? 'selected' : '' ?>><?= h($info['label']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+            </form>
+        </div>
+
+        <div class="dashboard-kpis">
+            <article class="kpi-card accent-blue"><span>Atendimentos</span><strong><?= h(number_format($data['total'], 0, ',', '.')) ?></strong><small><?= h($data['periods'][$period]['label']) ?></small></article>
+            <article class="kpi-card accent-cyan"><span>Hoje</span><strong><?= h((string) $data['today']) ?></strong><small>processos registrados</small></article>
+            <article class="kpi-card accent-green"><span>7 dias</span><strong><?= h((string) $data['week']) ?></strong><small>ritmo recente</small></article>
+            <article class="kpi-card accent-red"><span>Atendentes</span><strong><?= h((string) $data['attendants']) ?></strong><small>com registro no per&iacute;odo</small></article>
+        </div>
+
+        <section class="sei-flow-card">
+            <div>
+                <span class="eyebrow">Fila atual</span>
+                <h3><?= h((string) ($queue['next']['nome'] ?? 'Sem terceirizados na fila')) ?></h3>
+                <p>Pr&oacute;ximo atendimento liberado pelo rod&iacute;zio alfab&eacute;tico.</p>
+            </div>
+            <div class="sei-flow-steps">
+                <?php foreach ($queue['users'] as $index => $user): ?>
+                    <span class="<?= strcasecmp((string) $user['login'], (string) ($queue['next']['login'] ?? '')) === 0 ? 'active' : '' ?>">
+                        <?= h((string) ($index + 1)) ?>. <?= h((string) ($user['nome'] ?: $user['login'])) ?>
+                    </span>
+                <?php endforeach; ?>
+            </div>
+        </section>
+
+        <div class="dashboard-grid sei-report-grid">
+            <article class="dashboard-card">
+                <div class="dashboard-card-head"><div><span class="eyebrow">Ranking</span><h3>Atendimentos por terceirizado</h3></div></div>
+                <div class="rank-list">
+                    <?php if (!$data['ranking']): ?>
+                        <div class="empty-state">Nenhum atendimento no per&iacute;odo.</div>
+                    <?php else: ?>
+                        <?php foreach ($data['ranking'] as $row): ?>
+                            <?php $width = (int) round(((int) $row['total'] / $maxRanking) * 100); ?>
+                            <div class="rank-row">
+                                <i style="--w: <?= h((string) $width) ?>%"></i>
+                                <span><?= h((string) ($row['usuario_nome'] ?: $row['usuario_login'])) ?></span>
+                                <strong><?= h((string) $row['total']) ?></strong>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </article>
+
+            <article class="dashboard-card">
+                <div class="dashboard-card-head"><div><span class="eyebrow">Calend&aacute;rio</span><h3>Volume por dia</h3></div></div>
+                <div class="sei-day-list">
+                    <?php if (!$data['days']): ?>
+                        <div class="empty-state">Sem movimenta&ccedil;&atilde;o registrada.</div>
+                    <?php else: ?>
+                        <?php foreach ($data['days'] as $row): ?>
+                            <div>
+                                <span><?= h(date('d/m/Y', strtotime((string) $row['dia']))) ?></span>
+                                <strong><?= h((string) $row['total']) ?></strong>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </article>
+
+            <article class="dashboard-card wide">
+                <div class="dashboard-card-head"><div><span class="eyebrow">Hist&oacute;rico</span><h3>Processos atendidos</h3></div></div>
+                <div class="table-wrap sei-report-table-wrap">
+                    <table class="indicadores-table sei-report-table">
+                        <thead><tr><th>Data</th><th>Atendente</th><th>Login</th><th>Processo</th></tr></thead>
+                        <tbody>
+                        <?php if (!$data['recent']): ?>
+                            <tr><td colspan="4">Nenhum processo registrado no per&iacute;odo.</td></tr>
+                        <?php else: ?>
+                            <?php foreach ($data['recent'] as $row): ?>
+                                <tr>
+                                    <td><?= h(date('d/m/Y H:i', strtotime((string) $row['criado_em']))) ?></td>
+                                    <td><?= h((string) $row['usuario_nome']) ?></td>
+                                    <td><?= h((string) $row['usuario_login']) ?></td>
+                                    <td><strong><?= h((string) $row['processo']) ?></strong></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        </div>
     </section>
     <?php
 }

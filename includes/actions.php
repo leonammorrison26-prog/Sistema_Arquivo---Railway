@@ -106,6 +106,11 @@ function handle_actions(): void
             redirect_to($_POST['return_page'] ?? 'planilha');
         }
 
+        if ($action === 'save_sei_demanda') {
+            save_sei_demanda();
+            redirect_to($_POST['return_page'] ?? 'busca');
+        }
+
         if ($action === 'save_manual_processos') {
             save_manual_processos();
             redirect_to('cad_processo');
@@ -186,6 +191,36 @@ function planilha_filter_sql(array $input, array &$params): string
     }
 
     return ' WHERE ' . implode(' AND ', $where);
+}
+
+function save_sei_demanda(): void
+{
+    $user = $_SESSION['user'] ?? [];
+    if (!user_is_terceirizado($user)) {
+        throw new RuntimeException('A fila de demanda SEI e exclusiva para terceirizados.');
+    }
+
+    $state = sei_queue_state($user);
+    if (!$state['is_turn']) {
+        $nextName = (string) ($state['next']['nome'] ?? 'proximo atendente');
+        throw new RuntimeException('Ainda nao e sua vez. Proximo atendimento: ' . $nextName . '.');
+    }
+
+    $process = normalize_sei_process((string) ($_POST['processo'] ?? ''));
+    db()->prepare("
+        INSERT INTO sei_atendimentos (usuario_id, usuario_login, usuario_nome, processo, criado_em)
+        VALUES (:usuario_id, :usuario_login, :usuario_nome, :processo, :criado_em)
+    ")->execute([
+        ':usuario_id' => (int) ($user['id'] ?? 0),
+        ':usuario_login' => (string) ($user['login'] ?? ''),
+        ':usuario_nome' => (string) ($user['nome'] ?? ''),
+        ':processo' => $process,
+        ':criado_em' => date('Y-m-d H:i:s'),
+    ]);
+
+    $nextState = sei_queue_state($user);
+    $_SESSION['flash_success'] = 'Atendimento SEI registrado. Proxima demanda: '
+        . (string) ($nextState['next']['nome'] ?? 'fila atualizada') . '.';
 }
 
 function planilha_export_rows(): array

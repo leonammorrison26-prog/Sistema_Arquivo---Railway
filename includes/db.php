@@ -126,11 +126,32 @@ function migrate_db(PDO $pdo): void
         'criado_em' => "TEXT NOT NULL DEFAULT ''",
     ]);
 
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS sei_atendimentos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER NOT NULL DEFAULT 0,
+            usuario_login TEXT NOT NULL DEFAULT '',
+            usuario_nome TEXT NOT NULL DEFAULT '',
+            processo TEXT NOT NULL DEFAULT '',
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+
+    ensure_columns($pdo, 'sei_atendimentos', [
+        'usuario_id' => "INTEGER NOT NULL DEFAULT 0",
+        'usuario_login' => "TEXT NOT NULL DEFAULT ''",
+        'usuario_nome' => "TEXT NOT NULL DEFAULT ''",
+        'processo' => "TEXT NOT NULL DEFAULT ''",
+        'criado_em' => "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
+    ]);
+
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_acervo_caixa ON acervo (CAIXA)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_acervo_processo ON acervo (PROCESSO)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_acervo_assunto ON acervo (ASSUNTO)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_acervo_interessado ON acervo (INTERESSADO)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_acervo_texto ON acervo (TEXTO_GERAL)');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_sei_atendimentos_criado ON sei_atendimentos (criado_em)');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_sei_atendimentos_usuario ON sei_atendimentos (usuario_login)');
 
     $exists = (int) $pdo->query("SELECT COUNT(*) FROM usuarios WHERE UPPER(login) = 'ADMIN'")->fetchColumn();
     if ($exists === 0) {
