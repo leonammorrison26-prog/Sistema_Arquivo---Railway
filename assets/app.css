@@ -1550,6 +1550,84 @@ th { color: white; background: rgba(255,255,255,.05); }
     font-style: normal;
     font-size: .84rem;
 }
+.sei-home-card {
+    position: fixed;
+    right: clamp(12px, 2vw, 24px);
+    bottom: 12px;
+    z-index: 30;
+    width: min(300px, calc(100vw - 28px));
+    display: grid;
+    gap: 8px;
+    padding: 14px;
+    border: 2px solid #0ea5e9;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, .94);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .22);
+}
+.sei-home-card.is-your-turn {
+    border-color: #22c55e;
+}
+.sei-home-title {
+    color: #e0f2fe;
+    font-weight: 950;
+    font-size: 1rem;
+}
+.sei-home-card > span:not(.sei-home-title),
+.sei-home-meta {
+    color: #cbd5e1;
+    font-size: .82rem;
+    font-weight: 800;
+}
+.sei-home-card strong {
+    color: #fff;
+    font-size: 1rem;
+}
+.sei-home-next {
+    text-transform: uppercase;
+    letter-spacing: .02em;
+}
+.sei-home-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+}
+.sei-home-form input {
+    min-height: 38px;
+    border-radius: 8px;
+    font-size: .9rem;
+}
+.sei-home-form button {
+    min-height: 38px;
+    border-radius: 8px;
+    padding-inline: 12px;
+}
+.sei-home-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.sei-home-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding-top: 4px;
+}
+.sei-home-actions a,
+.sei-home-actions button {
+    min-height: 30px;
+    padding: 5px 9px;
+    border-radius: 8px;
+    border: 1px solid rgba(125, 211, 252, .32);
+    background: rgba(14, 165, 233, .12);
+    color: #e0f2fe;
+    font-size: .78rem;
+    font-weight: 850;
+    text-decoration: none;
+}
+.sei-home-actions form {
+    margin: 0;
+}
 .sei-demand-card,
 .sei-flow-card {
     border: 1px solid rgba(56, 189, 248, .18);
@@ -2845,6 +2923,28 @@ body.theme-light .source-split span,
 body.theme-light .source-split strong {
     min-width: 0;
 }
+body.theme-light .sei-home-card {
+    background: #ffffff;
+    border-color: #0369a1;
+    box-shadow: 0 18px 38px rgba(15, 23, 42, .12);
+}
+body.theme-light .sei-home-card.is-your-turn {
+    border-color: #16a34a;
+}
+body.theme-light .sei-home-title,
+body.theme-light .sei-home-card strong {
+    color: #0f172a;
+}
+body.theme-light .sei-home-card > span:not(.sei-home-title),
+body.theme-light .sei-home-meta {
+    color: #475569;
+}
+body.theme-light .sei-home-actions a,
+body.theme-light .sei-home-actions button {
+    background: #e0f2fe;
+    border-color: #7dd3fc;
+    color: #075985;
+}
 body.theme-light .sei-demand-card,
 body.theme-light .sei-flow-card {
     background:
@@ -3321,6 +3421,11 @@ body.theme-dark .sidebar {
     }
     .dashboard-card.wide {
         grid-column: auto;
+    }
+    .sei-home-card {
+        position: static;
+        width: 100%;
+        margin-bottom: 16px;
     }
     .sei-demand-form {
         grid-template-columns: 1fr;

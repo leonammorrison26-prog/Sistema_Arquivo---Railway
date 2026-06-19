@@ -54,8 +54,8 @@ function render_busca(): void
     ];
     $term = trim($_GET['q'] ?? '');
     $results = $term !== '' ? search_acervo($term, $scope) : [];
-    if (user_is_terceirizado()) {
-        render_sei_queue_widget();
+    if (sei_terceirizados()) {
+        render_sei_home_widget();
     }
     ?>
     <section class="panel">
@@ -81,6 +81,50 @@ function render_busca(): void
         <div class="alert success"><?= count($results) ?> item(ns) encontrado(s). Mostrando os primeiros 100 resultados.</div>
         <?php foreach ($results as $row): render_acervo_card($row); endforeach; ?>
     <?php endif;
+}
+
+function render_sei_home_widget(): void
+{
+    $state = sei_queue_state($_SESSION['user'] ?? []);
+    $next = $state['next'];
+    $last = $state['last'];
+    $isAdmin = user_is_admin();
+    ?>
+    <section class="sei-home-card <?= $state['is_turn'] ? 'is-your-turn' : '' ?>" aria-label="Fila de atendimentos SEI">
+        <span class="sei-home-title">Atendimentos SEI</span>
+        <?php if (!$next): ?>
+            <strong>Fila aguardando terceirizados</strong>
+        <?php elseif ($state['is_turn']): ?>
+            <strong>E a sua vez!</strong>
+            <form method="post" class="sei-home-form">
+                <input type="hidden" name="action" value="save_sei_demanda">
+                <input type="hidden" name="return_page" value="busca">
+                <input name="processo" inputmode="numeric" placeholder="00000.00000/0000-00" pattern="\d{5}\.\d{5}/\d{4}-\d{2}" required>
+                <button class="primary" type="submit">OK</button>
+            </form>
+        <?php else: ?>
+            <span>Proxima demanda</span>
+            <strong class="sei-home-next"><?= h($next['nome'] ?: $next['login']) ?></strong>
+        <?php endif; ?>
+
+        <div class="sei-home-meta">
+            <span><?= h((string) $state['position']) ?>/<?= h((string) $state['total']) ?></span>
+            <?php if ($last): ?><span><?= ($last['status'] ?? 'atendido') === 'pulado' ? 'ultimo: pulado' : 'ultimo: ' . h((string) $last['processo']) ?></span><?php endif; ?>
+        </div>
+
+        <div class="sei-home-actions">
+            <a href="/?page=rel_demanda_sei">Relatorio</a>
+            <?php if ($isAdmin && $next): ?>
+                <form method="post" onsubmit="return confirm('Pular a vez deste usuario na demanda SEI?')">
+                    <input type="hidden" name="action" value="skip_sei_demanda">
+                    <input type="hidden" name="return_page" value="busca">
+                    <input type="hidden" name="usuario_login" value="<?= h((string) $next['login']) ?>">
+                    <button type="submit">Pular</button>
+                </form>
+            <?php endif; ?>
+        </div>
+    </section>
+    <?php
 }
 
 function render_sei_queue_widget(): void
@@ -835,9 +879,18 @@ function render_dashboard(): void
         ORDER BY ULTIMA_ALTERACAO DESC
         LIMIT 6
     ")->fetchAll();
+    $seiRanking = $pdo->query("
+        SELECT usuario_nome, usuario_login, COUNT(*) AS total, MAX(criado_em) AS ultimo
+        FROM sei_atendimentos
+        WHERE status = 'atendido'
+        GROUP BY usuario_login, usuario_nome
+        ORDER BY total DESC, usuario_nome COLLATE NOCASE
+        LIMIT 8
+    ")->fetchAll();
     $maxLocation = max(array_map(fn ($row) => (int) $row['caixas'], $topLocations ?: [['caixas' => 0]]));
     $maxUnit = max(array_map(fn ($row) => (int) $row['itens'], $topUnits ?: [['itens' => 0]]));
     $maxSource = max(array_map(fn ($row) => (int) $row['itens'], $topSources ?: [['itens' => 0]]));
+    $maxSei = max(array_map(fn ($row) => (int) $row['total'], $seiRanking ?: [['total' => 0]]));
     $qualityItems = [
         ['label' => 'Sem temporalidade', 'value' => (int) ($quality['sem_temp'] ?? 0), 'href' => '/?page=rel_temporalidade'],
         ['label' => 'Sem caixa', 'value' => (int) ($quality['sem_caixa'] ?? 0), 'href' => '/?page=busca&scope=geral&q=---'],
@@ -899,6 +952,26 @@ function render_dashboard(): void
                         <div><span>Usuários</span><strong><?= h($fmt($totals['usuarios'])) ?></strong></div>
                     </div>
                 </div>
+            </section>
+
+            <section class="dashboard-card sei-rank-card">
+                <div class="dashboard-card-head">
+                    <div><span class="eyebrow">Atendimentos SEI</span><h3>Ranking de demandas</h3></div>
+                    <a class="mini-link" href="/?page=rel_demanda_sei">Ver painel</a>
+                </div>
+                <?php if (!$seiRanking): ?>
+                    <div class="empty-state">Nenhum atendimento SEI registrado ainda.</div>
+                <?php else: ?>
+                    <div class="rank-list compact">
+                        <?php foreach ($seiRanking as $row): ?>
+                            <div class="rank-row">
+                                <span><?= h((string) ($row['usuario_nome'] ?: $row['usuario_login'])) ?></span>
+                                <strong><?= h($fmt($row['total'])) ?></strong>
+                                <i style="--w: <?= h((string) $bar($row['total'], $maxSei)) ?>%"></i>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             </section>
 
             <section class="dashboard-card wide">
