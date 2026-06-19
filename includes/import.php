@@ -75,7 +75,7 @@ function import_planilhas_on_login(bool $force = false): array
 
     $imported = 0;
     $completed = true;
-    $deadline = microtime(true) + 12;
+    $deadline = microtime(true) + ($force ? 90 : 18);
     foreach ($files as $file) {
         if (microtime(true) >= $deadline) {
             $completed = false;
@@ -107,14 +107,15 @@ function import_planilhas_on_login(bool $force = false): array
 
 function planilha_import_files(): array
 {
-    $files = glob(PLANILHAS_DIR . DIRECTORY_SEPARATOR . '*.xlsx') ?: [];
+    $files = xlsx_files_recursive(PLANILHAS_DIR);
     return array_values(array_filter($files, function ($file) {
         $name = basename($file);
         if (!is_file($file) || str_starts_with($name, '~$')) {
             return false;
         }
 
-        return !str_contains(normalize_search_text($name), 'indicadores');
+        $relative = normalize_search_text(str_replace(PLANILHAS_DIR . DIRECTORY_SEPARATOR, '', $file));
+        return !str_contains($relative, 'indicadores');
     }));
 }
 
@@ -124,8 +125,29 @@ function indicador_planilha_files(): array
         return [];
     }
 
-    $files = glob(INDICADORES_PLANILHAS_DIR . DIRECTORY_SEPARATOR . '*.xlsx') ?: [];
+    $files = xlsx_files_recursive(INDICADORES_PLANILHAS_DIR);
     return array_values(array_filter($files, fn ($file) => is_file($file) && !str_starts_with(basename($file), '~$')));
+}
+
+function xlsx_files_recursive(string $dir): array
+{
+    if (!is_dir($dir)) {
+        return [];
+    }
+
+    $files = [];
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS)
+    );
+
+    foreach ($iterator as $item) {
+        if ($item->isFile() && strtolower($item->getExtension()) === 'xlsx') {
+            $files[] = $item->getPathname();
+        }
+    }
+
+    natcasesort($files);
+    return array_values($files);
 }
 
 function import_indicadores_planilhas(bool $force = false): array
@@ -364,10 +386,11 @@ function indicador_mirror_local(array $row): void
 
 function planilhas_fingerprint(array $files): string
 {
-    $parts = [];
+    $parts = ['import-v2'];
     sort($files);
     foreach ($files as $file) {
-        $parts[] = basename($file) . ':' . filesize($file) . ':' . filemtime($file);
+        $relative = str_replace((defined('PLANILHAS_DIR') ? PLANILHAS_DIR : dirname($file)) . DIRECTORY_SEPARATOR, '', $file);
+        $parts[] = $relative . ':' . filesize($file) . ':' . filemtime($file);
     }
 
     return hash('sha256', implode('|', $parts));

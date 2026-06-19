@@ -3,3 +3,4 @@ banco_diarq.db
 *.db-journal
 *.db-wal
 *.db-shm
+sessions/

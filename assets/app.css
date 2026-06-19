@@ -2274,6 +2274,19 @@ th { color: white; background: rgba(255,255,255,.05); }
     outline: 0;
     box-shadow: 0 0 0 1px rgba(93, 125, 176, 0.24);
 }
+.login-screen:not(.theme-light) .login-card input,
+.login-screen:not(.theme-light) .password-field {
+    background: #292a33;
+    color: #f8fafc;
+    caret-color: #f8fafc;
+}
+.login-screen:not(.theme-light) .login-card input:-webkit-autofill,
+.login-screen:not(.theme-light) .login-card input:-webkit-autofill:hover,
+.login-screen:not(.theme-light) .login-card input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #f8fafc;
+    box-shadow: 0 0 0 1000px #292a33 inset;
+    transition: background-color 9999s ease-in-out 0s;
+}
 .login-card .primary {
     width: 100%;
     min-height: 48px;

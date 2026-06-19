@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 const APP_NAME = 'Gestao de Acervos - DIARQ / MDS';
+const APP_BROWSER_TITLE = 'MDS - DIARQ';
+const APP_FAVICON_DATA_URI = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%23111827%22/%3E%3Cpath d=%22M10 19a7 7 0 0 1 7-7h10l6 7h14a7 7 0 0 1 7 7v19a7 7 0 0 1-7 7H17a7 7 0 0 1-7-7z%22 fill=%22%23fbbf24%22/%3E%3Cpath d=%22M10 27h44v18a7 7 0 0 1-7 7H17a7 7 0 0 1-7-7z%22 fill=%22%23f59e0b%22/%3E%3C/svg%3E';
 
 $baseDir = dirname(__DIR__);
 $dataDir = getenv('RAILWAY_VOLUME_MOUNT_PATH') ?: (getenv('DATA_DIR') ?: $baseDir);
@@ -46,6 +48,21 @@ if (is_dir(BUNDLED_PLANILHAS_DIR)) {
 }
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
+    $sessionDir = DATA_DIR . DIRECTORY_SEPARATOR . 'sessions';
+    if (!is_dir($sessionDir)) {
+        @mkdir($sessionDir, 0775, true);
+    }
+    if (is_dir($sessionDir) && is_writable($sessionDir)) {
+        session_save_path($sessionDir);
+    }
+    session_name('DIARQSESSID');
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https'),
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
     session_start();
 }
 

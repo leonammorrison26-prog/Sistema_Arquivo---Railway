@@ -16,7 +16,9 @@ function render_header(string $title = APP_NAME): void
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title><?= h($title) ?></title>
+        <title><?= h(APP_BROWSER_TITLE) ?></title>
+        <link rel="icon" type="image/svg+xml" href="<?= h(APP_FAVICON_DATA_URI) ?>">
+        <meta name="theme-color" content="#111827">
         <link rel="stylesheet" href="/assets/app.css">
     </head>
     <body>
