@@ -4888,3 +4888,89 @@ body.theme-light .more-menu {
         width: 100% !important;
     }
 }
+
+/* Mobile layout fixes after video review */
+@media (max-width: 900px) {
+    html,
+    body {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    .app-shell,
+    .main,
+    .panel,
+    .empty-state,
+    .page-title {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .main {
+        overflow-x: hidden;
+        padding-inline: 14px;
+    }
+
+    .panel {
+        overflow: hidden;
+    }
+
+    .tabs {
+        width: 100%;
+        max-width: 100%;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        margin: 0 0 14px;
+        padding: 0 0 6px;
+        scrollbar-width: thin;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .tabs a {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+
+    .acervo-summary {
+        position: static !important;
+        left: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+        width: 100% !important;
+        max-width: none !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        margin: 16px 0 0 !important;
+        padding: 10px 8px !important;
+        transform: none !important;
+    }
+
+    .summary-item {
+        min-width: 0;
+    }
+
+    .summary-item span {
+        white-space: normal;
+        font-size: .58rem;
+        line-height: 1.12;
+    }
+
+    .summary-item strong {
+        font-size: 1.05rem;
+        line-height: 1.05;
+    }
+}
+
+@media (max-width: 420px) {
+    .acervo-summary {
+        gap: 6px;
+    }
+
+    .summary-item span {
+        font-size: .54rem;
+    }
+
+    .summary-item strong {
+        font-size: .95rem;
+    }
+}
