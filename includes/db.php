@@ -211,6 +211,8 @@ function migrate_db(PDO $pdo): void
         ");
         $stmt->execute();
     }
+
+    restore_bundled_backup_if_empty($pdo);
 }
 
 function ensure_columns(PDO $pdo, string $table, array $columns): void
@@ -226,4 +228,75 @@ function ensure_columns(PDO $pdo, string $table, array $columns): void
             $pdo->exec('ALTER TABLE ' . $table . ' ADD COLUMN ' . $name . ' ' . $definition);
         }
     }
+}
+
+function restore_bundled_backup_if_empty(PDO $pdo): void
+{
+    $backupPath = is_file(SEED_DB_PATH) ? SEED_DB_PATH : BUNDLED_DB_PATH;
+    if (!is_file($backupPath) || realpath(DB_PATH) === realpath($backupPath)) {
+        return;
+    }
+
+    try {
+        $localCount = (int) $pdo->query('SELECT COUNT(*) FROM acervo')->fetchColumn();
+        if ($localCount > 0) {
+            return;
+        }
+
+        $pdo->exec("ATTACH DATABASE " . $pdo->quote($backupPath) . " AS bundled_backup");
+        $tables = [
+            'usuarios' => "SELECT COUNT(*) FROM bundled_backup.sqlite_master WHERE type = 'table' AND name = 'usuarios'",
+            'acervo' => "SELECT COUNT(*) FROM bundled_backup.sqlite_master WHERE type = 'table' AND name = 'acervo'",
+            'indicadores' => "SELECT COUNT(*) FROM bundled_backup.sqlite_master WHERE type = 'table' AND name = 'indicadores'",
+            'sei_atendimentos' => "SELECT COUNT(*) FROM bundled_backup.sqlite_master WHERE type = 'table' AND name = 'sei_atendimentos'",
+        ];
+
+        foreach ($tables as $table => $existsSql) {
+            if ((int) $pdo->query($existsSql)->fetchColumn() === 0) {
+                continue;
+            }
+            $columns = common_table_columns($pdo, $table, 'bundled_backup.' . $table);
+            if (!$columns) {
+                continue;
+            }
+            $columnList = implode(', ', array_map(fn ($column) => '"' . str_replace('"', '""', $column) . '"', $columns));
+            $pdo->exec("INSERT OR IGNORE INTO {$table} ({$columnList}) SELECT {$columnList} FROM bundled_backup.{$table}");
+        }
+
+        $pdo->exec('DETACH DATABASE bundled_backup');
+    } catch (Throwable $e) {
+        try {
+            $pdo->exec('DETACH DATABASE bundled_backup');
+        } catch (Throwable) {
+        }
+        error_log('[diarq] bundled backup restore skipped: ' . $e->getMessage());
+    }
+}
+
+function common_table_columns(PDO $pdo, string $localTable, string $backupTable): array
+{
+    $local = [];
+    foreach ($pdo->query(table_info_pragma($localTable))->fetchAll() as $row) {
+        $local[(string) $row['name']] = true;
+    }
+
+    $columns = [];
+    foreach ($pdo->query(table_info_pragma($backupTable))->fetchAll() as $row) {
+        $name = (string) $row['name'];
+        if (isset($local[$name])) {
+            $columns[] = $name;
+        }
+    }
+
+    return $columns;
+}
+
+function table_info_pragma(string $table): string
+{
+    if (str_contains($table, '.')) {
+        [$schema, $name] = explode('.', $table, 2);
+        return 'PRAGMA "' . str_replace('"', '""', $schema) . '".table_info("' . str_replace('"', '""', $name) . '")';
+    }
+
+    return 'PRAGMA table_info("' . str_replace('"', '""', $table) . '")';
 }

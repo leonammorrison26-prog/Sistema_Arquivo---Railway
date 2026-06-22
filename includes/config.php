@@ -21,6 +21,7 @@ define('BASE_DIR', $baseDir);
 define('DATA_DIR', $dataDir);
 define('DB_PATH', DATA_DIR . DIRECTORY_SEPARATOR . 'banco_diarq.db');
 define('BUNDLED_DB_PATH', BASE_DIR . DIRECTORY_SEPARATOR . 'banco_diarq.db');
+define('SEED_DB_PATH', BASE_DIR . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'seed_backup.sqlite');
 define('PLANILHAS_DIR', DATA_DIR . DIRECTORY_SEPARATOR . 'planilhas');
 define('INDICADORES_PLANILHAS_DIR', PLANILHAS_DIR . DIRECTORY_SEPARATOR . 'INDICADORES');
 define('BUNDLED_PLANILHAS_DIR', BASE_DIR . DIRECTORY_SEPARATOR . 'planilhas');
@@ -52,8 +53,12 @@ $supabaseConfiguredAtBoot = app_running_on_railway()
         || (getenv('SUPABASE_SERVICE_KEY') ?: '') !== ''
     );
 
-if (!$supabaseConfiguredAtBoot && !is_file(DB_PATH) && is_file(BUNDLED_DB_PATH)) {
-    @copy(BUNDLED_DB_PATH, DB_PATH);
+if (!is_file(DB_PATH)) {
+    if (is_file(SEED_DB_PATH)) {
+        @copy(SEED_DB_PATH, DB_PATH);
+    } elseif (is_file(BUNDLED_DB_PATH)) {
+        @copy(BUNDLED_DB_PATH, DB_PATH);
+    }
 }
 
 if (!is_dir(PLANILHAS_DIR)) {
