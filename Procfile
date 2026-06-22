@@ -1,1 +1,1 @@
-web: php -S 0.0.0.0:${PORT:-8080} router.php
+web: php scripts/start-railway.php
