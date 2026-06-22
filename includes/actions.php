@@ -76,20 +76,12 @@ function handle_actions(): void
         }
 
         if ($action === 'sync_now') {
-            $result = sync_app_data(true);
-            $supabaseSummary = supabase_enabled()
-                ? (int) ($result['supabase']['acervo'] ?? 0) . ' item(ns) do Supabase, '
-                    . (int) ($result['supabase']['usuarios'] ?? 0) . ' usuario(s), '
-                    . (int) ($result['supabase']['indicadores'] ?? 0) . ' indicador(es) e '
-                : 'modo local SQLite, ';
-            $_SESSION['flash_success'] = 'Sincronizacao manual concluida: '
-                . $supabaseSummary
-                . (int) ($result['planilhas']['imported'] ?? 0) . ' registro(s) de acervo, '
-                . (int) ($result['indicadores_planilhas']['imported'] ?? 0) . ' indicador(es) de planilha.';
-            if (($result['planilhas']['completed'] ?? true) === false) {
-                $_SESSION['flash_success'] .= ' Importacao parcial para evitar tempo limite; clique em Sincronizar novamente para continuar.';
+            if (trigger_silent_sync('manual')) {
+                $_SESSION['flash_success'] = 'Sincronizacao iniciada em segundo plano. Voce pode continuar usando o sistema; os dados serao atualizados em silencio.';
+                system_event('sync_manual_agendada', 'Sincronizacao manual iniciada em segundo plano');
+            } else {
+                $_SESSION['flash_success'] = 'Ja existe uma sincronizacao em andamento. Aguarde alguns minutos e atualize a pagina.';
             }
-            system_event('sync_manual', 'Sincronizacao manual executada', $result);
             redirect_to($_POST['return_page'] ?? current_page());
         }
 

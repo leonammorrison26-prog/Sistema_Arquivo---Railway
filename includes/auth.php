@@ -25,7 +25,7 @@ function login_user(string $login, string $senha): bool
         mirror_user_local($user);
         $_SESSION['user'] = $user;
         system_event('login', 'Login realizado via Supabase', ['login' => trim($login)]);
-        trigger_silent_sync_after_login();
+        trigger_silent_sync('login');
         return true;
     }
 
@@ -36,7 +36,7 @@ function login_user(string $login, string $senha): bool
 
     $_SESSION['user'] = $user;
     system_event('login', 'Login realizado no banco local', ['login' => trim($login)]);
-    trigger_silent_sync_after_login();
+    trigger_silent_sync('login');
     return true;
 }
 
@@ -164,32 +164,36 @@ function sync_app_data(bool $forcePlanilhas = false): array
     return ['supabase' => $supabase, 'planilhas' => $planilhas, 'indicadores_planilhas' => $indicadoresPlanilhas];
 }
 
-function trigger_silent_sync_after_login(): void
+function trigger_silent_sync(string $reason = 'manual'): bool
 {
     $script = BASE_DIR . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'silent-sync.php';
     if (!is_file($script)) {
-        return;
+        return false;
     }
 
     $lockPath = DATA_DIR . DIRECTORY_SEPARATOR . 'silent-sync.lock';
     if (is_file($lockPath) && (time() - (int) @filemtime($lockPath)) < 900) {
-        return;
+        return false;
     }
+    @file_put_contents($lockPath, 'queued=' . date('c') . ' reason=' . $reason . PHP_EOL);
 
     $logPath = DATA_DIR . DIRECTORY_SEPARATOR . 'silent-sync.log';
     $php = PHP_BINARY ?: 'php';
+    $reason = preg_replace('/[^a-z0-9_-]+/i', '_', $reason) ?: 'manual';
 
     try {
         if (PHP_OS_FAMILY === 'Windows') {
-            $command = 'start /B "" ' . escapeshellarg($php) . ' ' . escapeshellarg($script) . ' login >> ' . escapeshellarg($logPath) . ' 2>&1';
+            $command = 'start /B "" ' . escapeshellarg($php) . ' ' . escapeshellarg($script) . ' ' . escapeshellarg($reason) . ' >> ' . escapeshellarg($logPath) . ' 2>&1';
             pclose(popen($command, 'r'));
-            return;
+            return true;
         }
 
-        $command = escapeshellarg($php) . ' ' . escapeshellarg($script) . ' login >> ' . escapeshellarg($logPath) . ' 2>&1 &';
+        $command = escapeshellarg($php) . ' ' . escapeshellarg($script) . ' ' . escapeshellarg($reason) . ' >> ' . escapeshellarg($logPath) . ' 2>&1 &';
         exec($command);
+        return true;
     } catch (Throwable $e) {
         error_log('[diarq] silent sync trigger failed: ' . $e->getMessage());
+        return false;
     }
 }
 
