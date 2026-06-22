@@ -77,15 +77,19 @@ function handle_actions(): void
 
         if ($action === 'sync_now') {
             $result = sync_app_data(true);
+            $supabaseSummary = supabase_enabled()
+                ? (int) ($result['supabase']['acervo'] ?? 0) . ' item(ns) do Supabase, '
+                    . (int) ($result['supabase']['usuarios'] ?? 0) . ' usuario(s), '
+                    . (int) ($result['supabase']['indicadores'] ?? 0) . ' indicador(es) e '
+                : 'modo local SQLite, ';
             $_SESSION['flash_success'] = 'Sincronizacao manual concluida: '
-                . (int) ($result['supabase']['acervo'] ?? 0) . ' item(ns) do Supabase, '
-                . (int) ($result['supabase']['usuarios'] ?? 0) . ' usuario(s), '
-                . (int) ($result['supabase']['indicadores'] ?? 0) . ' indicador(es) e '
+                . $supabaseSummary
                 . (int) ($result['planilhas']['imported'] ?? 0) . ' registro(s) de acervo, '
                 . (int) ($result['indicadores_planilhas']['imported'] ?? 0) . ' indicador(es) de planilha.';
             if (($result['planilhas']['completed'] ?? true) === false) {
                 $_SESSION['flash_success'] .= ' Importacao parcial para evitar tempo limite; clique em Sincronizar novamente para continuar.';
             }
+            system_event('sync_manual', 'Sincronizacao manual executada', $result);
             redirect_to($_POST['return_page'] ?? current_page());
         }
 
@@ -148,7 +152,7 @@ function handle_actions(): void
                 $login = db()->prepare('SELECT login FROM usuarios WHERE id = :id');
                 $login->execute([':id' => $id]);
                 $loginValue = (string) $login->fetchColumn();
-                if ($loginValue !== '') {
+                if ($loginValue !== '' && supabase_enabled()) {
                     supabase_request('DELETE', 'usuarios', [], ['usuario' => 'eq.' . $loginValue], true);
                 }
                 db()->prepare('DELETE FROM usuarios WHERE id = :id AND UPPER(login) <> "ADMIN"')->execute([':id' => $id]);
@@ -299,8 +303,10 @@ function delete_acervo_ids(array $ids): int
         throw new RuntimeException('Selecione pelo menos um cadastro.');
     }
 
-    foreach ($ids as $id) {
-        supabase_request('DELETE', 'inventario', [], ['observacao' => 'ilike.*ID_UNICO=' . $id . '*'], true);
+    if (supabase_enabled()) {
+        foreach ($ids as $id) {
+            supabase_request('DELETE', 'inventario', [], ['observacao' => 'ilike.*ID_UNICO=' . $id . '*'], true);
+        }
     }
 
     $placeholders = [];
@@ -313,6 +319,8 @@ function delete_acervo_ids(array $ids): int
 
     $stmt = db()->prepare('DELETE FROM acervo WHERE ID_UNICO IN (' . implode(',', $placeholders) . ')');
     $stmt->execute($params);
+    system_event('acervo_exclusao', 'Cadastro(s) excluido(s)', ['ids' => $ids, 'total' => $stmt->rowCount()]);
+    acervo_fts_rebuild();
     return $stmt->rowCount();
 }
 
@@ -345,7 +353,9 @@ function save_acervo(): void
     ];
     $row['TEXTO_GERAL'] = build_texto_geral($row);
 
-    supabase_request('POST', 'inventario', supabase_acervo_payload($row), [], true);
+    if (supabase_enabled()) {
+        supabase_request('POST', 'inventario', supabase_acervo_payload($row), [], true);
+    }
 
     $exists = db()->prepare('SELECT COUNT(*) FROM acervo WHERE ID_UNICO = :id');
     $exists->execute([':id' => $row['ID_UNICO']]);
@@ -373,6 +383,8 @@ function save_acervo(): void
                 TEXTO_GERAL = :TEXTO_GERAL
             WHERE ID_UNICO = :ID_UNICO
         ")->execute($row);
+        system_event('acervo_atualizado', 'Cadastro de acervo atualizado', ['id' => $row['ID_UNICO'], 'caixa' => $row['CAIXA'], 'processo' => $row['PROCESSO']]);
+        acervo_fts_rebuild();
         return;
     }
 
@@ -382,6 +394,8 @@ function save_acervo(): void
         VALUES
             (:ID_UNICO, :UNIDADE, :ASSUNTO, :INTERESSADO, :DATA, :TEMPORALIDADE, :CAIXA, :PROCESSO, :LOCALIZACAO, :OBSERVACAO, :VOLUMES, :RESPONSAVEL, :DATA_LIMITE, :ALTERADO_POR, :ULTIMA_ALTERACAO, :STATUS_EMPRESTIMO, :QUEM_RETIROU, :FONTE_ARQUIVO, :TEXTO_GERAL)
     ")->execute($row);
+    system_event('acervo_criado', 'Cadastro de acervo criado', ['id' => $row['ID_UNICO'], 'caixa' => $row['CAIXA'], 'processo' => $row['PROCESSO']]);
+    acervo_fts_rebuild();
 }
 
 function save_manual_processos(): void
@@ -428,7 +442,9 @@ function save_manual_processos(): void
         ];
         $row['TEXTO_GERAL'] = build_texto_geral($row);
 
-        supabase_request('POST', 'inventario', supabase_acervo_payload($row), [], true);
+        if (supabase_enabled()) {
+            supabase_request('POST', 'inventario', supabase_acervo_payload($row), [], true);
+        }
         db()->prepare("
             INSERT INTO acervo
                 (ID_UNICO, UNIDADE, ASSUNTO, INTERESSADO, DATA, TEMPORALIDADE, CAIXA, PROCESSO, LOCALIZACAO, OBSERVACAO, VOLUMES, RESPONSAVEL, DATA_LIMITE, ALTERADO_POR, ULTIMA_ALTERACAO, STATUS_EMPRESTIMO, QUEM_RETIROU, FONTE_ARQUIVO, TEXTO_GERAL)
@@ -443,6 +459,8 @@ function save_manual_processos(): void
     }
 
     $_SESSION['flash_success'] = 'Itens cadastrados na Caixa ' . $caixa . '.';
+    system_event('acervo_cadastro_manual', 'Itens cadastrados manualmente', ['caixa' => $caixa, 'total' => $saved]);
+    acervo_fts_rebuild();
 }
 
 function save_indicadores(): void
@@ -480,7 +498,9 @@ function save_indicadores(): void
         'dados_json' => json_encode($dados, JSON_UNESCAPED_UNICODE),
     ];
 
-    supabase_request('POST', getenv('SUPABASE_INDICADORES_TABLE') ?: 'indicadores', $row, [], true);
+    if (supabase_enabled()) {
+        supabase_request('POST', getenv('SUPABASE_INDICADORES_TABLE') ?: 'indicadores', $row, [], true);
+    }
 
     $stmt = db()->prepare('INSERT INTO indicadores (colaborador, data, dados_json) VALUES (:colaborador, :data, :dados)');
     $stmt->execute([
@@ -490,6 +510,7 @@ function save_indicadores(): void
     ]);
 
     $_SESSION['flash_success'] = 'Registro diario de indicadores salvo com sucesso.';
+    system_event('indicadores_salvo', 'Registro diario de indicadores salvo', ['colaborador' => $row['colaborador'], 'data' => $row['data']]);
 }
 
 function save_user(): void
@@ -526,9 +547,11 @@ function save_user(): void
     ];
 
     if ($id > 0) {
-        supabase_upsert('usuarios', supabase_user_payload($data), 'usuario');
+        if (supabase_enabled()) {
+            supabase_upsert('usuarios', supabase_user_payload($data), 'usuario');
+        }
         $oldLogin = trim((string) ($currentUser['login'] ?? ''));
-        if ($oldLogin !== '' && strcasecmp($oldLogin, (string) $data[':login']) !== 0) {
+        if ($oldLogin !== '' && strcasecmp($oldLogin, (string) $data[':login']) !== 0 && supabase_enabled()) {
             supabase_request('DELETE', 'usuarios', [], ['usuario' => 'eq.' . $oldLogin], false);
         }
         $data[':id'] = $id;
@@ -559,10 +582,13 @@ function save_user(): void
             ]);
         }
         $_SESSION['flash_success'] = 'Cadastro de usuario atualizado.';
+        system_event('usuario_atualizado', 'Usuario atualizado', ['login' => $data[':login']]);
         return;
     }
 
-    supabase_upsert('usuarios', supabase_user_payload($data), 'usuario');
+    if (supabase_enabled()) {
+        supabase_upsert('usuarios', supabase_user_payload($data), 'usuario');
+    }
 
     db()->prepare("
         INSERT INTO usuarios
@@ -570,6 +596,7 @@ function save_user(): void
         VALUES
             (:nome, :login, :senha, :tipo_usuario, :departamento, :p_extrair_excel, :p_sincronizar, :p_gerir_usuarios, :p_cadastrar_caixa, :p_somente_pesquisa, :p_botao_editar, :p_emprestimo, :setores_permitidos, :TROCAR_SENHA)
     ")->execute($data);
+    system_event('usuario_criado', 'Usuario criado', ['login' => $data[':login']]);
 }
 
 function supabase_acervo_payload(array $row): array

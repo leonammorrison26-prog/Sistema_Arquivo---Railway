@@ -21,7 +21,15 @@ $context = assistant_context($message);
 $contextPrompt = assistant_context_prompt($context);
 
 if ($apiKey === '') {
-    echo json_encode(['reply' => assistant_local_reply($message, $context)], JSON_UNESCAPED_UNICODE);
+    $reply = assistant_local_reply($message, $context);
+    db()->prepare('INSERT INTO assistant_memory (pergunta, resposta, contexto_json) VALUES (:pergunta, :resposta, :contexto)')
+        ->execute([
+            ':pergunta' => $message,
+            ':resposta' => $reply,
+            ':contexto' => json_encode($context, JSON_UNESCAPED_UNICODE) ?: '{}',
+        ]);
+    system_event('assistente_resposta_local', 'Assistente local respondeu uma pergunta', ['pergunta' => $message]);
+    echo json_encode(['reply' => $reply], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -66,4 +74,13 @@ if (!$reply && isset($data['output'][0]['content'][0]['text'])) {
     $reply = $data['output'][0]['content'][0]['text'];
 }
 
-echo json_encode(['reply' => $reply ?: 'Nao foi possivel interpretar a resposta da API.'], JSON_UNESCAPED_UNICODE);
+$reply = $reply ?: 'Nao foi possivel interpretar a resposta da API.';
+db()->prepare('INSERT INTO assistant_memory (pergunta, resposta, contexto_json) VALUES (:pergunta, :resposta, :contexto)')
+    ->execute([
+        ':pergunta' => $message,
+        ':resposta' => $reply,
+        ':contexto' => json_encode($context, JSON_UNESCAPED_UNICODE) ?: '{}',
+    ]);
+system_event('assistente_resposta', 'Assistente respondeu uma pergunta', ['pergunta' => $message]);
+
+echo json_encode(['reply' => $reply], JSON_UNESCAPED_UNICODE);

@@ -20,6 +20,7 @@ if (password_change_required() && $page !== 'trocar_senha') {
 render_header();
 
 match ($page) {
+    'central' => render_central(),
     'trocar_senha' => render_password_change(),
     'cad_caixa' => render_cad_caixa(),
     'cad_processo' => render_cad_processo(),
@@ -28,6 +29,9 @@ match ($page) {
     'documentos' => render_documentos(),
     'indicadores_semanal' => render_indicadores(),
     'dashboard' => render_dashboard(),
+    'diagnostico' => render_diagnostico(),
+    'mapa_acervo' => render_mapa_acervo(),
+    'preview_export' => render_export_preview(),
     'rel_temporalidade' => render_rel_temporalidade(),
     'rel_indicadores' => render_rel_indicadores(),
     'rel_demanda_sei' => render_rel_demanda_sei(),
@@ -53,10 +57,21 @@ function render_busca(): void
         'processos' => 'Pesquisar por numero do processo...',
     ];
     $term = trim($_GET['q'] ?? '');
-    $results = $term !== '' ? search_acervo($term, $scope) : [];
-    if (sei_terceirizados()) {
-        render_sei_home_widget();
-    }
+    $filterInput = [
+        'q' => $term,
+        'caixa' => $_GET['caixa'] ?? '',
+        'processo' => $_GET['processo'] ?? '',
+        'interessado' => $_GET['interessado'] ?? '',
+        'localizacao' => $_GET['localizacao'] ?? '',
+        'temporalidade' => $_GET['temporalidade'] ?? '',
+    ];
+    $hasFilters = array_filter($filterInput, fn ($value) => trim((string) $value) !== '') !== [];
+    $results = $hasFilters
+        ? (array_filter($filterInput, fn ($value, $key) => $key !== 'q' && trim((string) $value) !== '', ARRAY_FILTER_USE_BOTH)
+            ? search_acervo_filtered($filterInput)
+            : search_acervo($term, $scope))
+        : [];
+    render_sei_home_widget();
     ?>
     <section class="panel">
         <nav class="tabs">
@@ -69,11 +84,21 @@ function render_busca(): void
             <input type="hidden" name="scope" value="<?= h($scope) ?>">
             <input name="q" value="<?= h($term) ?>" placeholder="<?= h($placeholders[$scope] ?? $placeholders['geral']) ?>">
             <button type="submit"><?= app_icon('send') ?>Buscar</button>
-            <?php if ($term !== ''): ?><a class="icon-button" href="/?page=busca&scope=<?= h($scope) ?>">Nova</a><?php endif; ?>
+            <?php if ($hasFilters): ?><a class="icon-button" href="/?page=busca&scope=<?= h($scope) ?>">Nova</a><?php endif; ?>
+            <details class="advanced-filters">
+                <summary>Filtros</summary>
+                <div class="filter-grid">
+                    <label>Caixa <input name="caixa" value="<?= h($filterInput['caixa']) ?>" placeholder="Ex: 123"></label>
+                    <label>Processo <input name="processo" value="<?= h($filterInput['processo']) ?>" placeholder="00000.00000/0000-00"></label>
+                    <label>Interessado <input name="interessado" value="<?= h($filterInput['interessado']) ?>"></label>
+                    <label>Localizacao <input name="localizacao" value="<?= h($filterInput['localizacao']) ?>"></label>
+                    <label>Temporalidade <input name="temporalidade" value="<?= h($filterInput['temporalidade']) ?>"></label>
+                </div>
+            </details>
         </form>
     </section>
 
-    <?php if ($term === ''): ?>
+    <?php if (!$hasFilters): ?>
         <div class="empty-state">Digite um termo para pesquisar no acervo.</div>
     <?php elseif (!$results): ?>
         <div class="alert">Nenhum documento encontrado para este termo em todo o acervo.</div>
@@ -81,6 +106,63 @@ function render_busca(): void
         <div class="alert success"><?= count($results) ?> item(ns) encontrado(s). Mostrando os primeiros 100 resultados.</div>
         <?php foreach ($results as $row): render_acervo_card($row); endforeach; ?>
     <?php endif;
+}
+
+function render_central(): void
+{
+    $attention = attention_items();
+    $jobs = recent_import_jobs(5);
+    $events = recent_system_events(8);
+    $map = acervo_map_data(5);
+    ?>
+    <section class="dashboard-page">
+        <div class="dashboard-hero">
+            <div>
+                <span class="eyebrow">Central de Trabalho</span>
+                <h2>O que precisa de atenção hoje?</h2>
+                <p>Um painel de partida para consulta, cadastro, sincronização, diagnóstico e revisão rápida do acervo.</p>
+            </div>
+            <div class="dashboard-actions">
+                <a class="button primary" href="/?page=busca">Consultar acervo</a>
+                <a class="button" href="/?page=cad_caixa">Cadastrar caixa</a>
+                <a class="button" href="/?page=assistente_openai">Falar com IA</a>
+            </div>
+        </div>
+        <?php if (sei_terceirizados()): ?>
+            <?php render_sei_queue_widget(); ?>
+        <?php endif; ?>
+        <div class="dashboard-grid">
+            <section class="dashboard-card quality-card">
+                <div class="dashboard-card-head"><div><span class="eyebrow">Atenção</span><h3>Fila de melhoria</h3></div></div>
+                <?php if (!$attention): ?><div class="empty-state">Nada crítico encontrado agora.</div><?php endif; ?>
+                <div class="quality-list">
+                    <?php foreach ($attention as $item): ?>
+                        <a class="quality-row" href="<?= h($item['href']) ?>"><span><?= h($item['label']) ?></span><strong><?= h(number_format((int) $item['value'], 0, ',', '.')) ?></strong><em>corrigir</em><i style="--w: 100%"></i></a>
+                    <?php endforeach; ?>
+                </div>
+            </section>
+            <section class="dashboard-card">
+                <div class="dashboard-card-head"><div><span class="eyebrow">Importação</span><h3>Últimos jobs</h3></div><a class="mini-link" href="/?page=diagnostico">Diagnóstico</a></div>
+                <div class="activity-list">
+                    <?php foreach ($jobs as $job): ?><article><strong><?= h($job['status']) ?></strong><span><?= h($job['tipo']) ?> · <?= h((string) $job['total_registros']) ?> registro(s)</span><em><?= h($job['concluido_em'] ?: $job['criado_em']) ?></em></article><?php endforeach; ?>
+                </div>
+            </section>
+            <section class="dashboard-card">
+                <div class="dashboard-card-head"><div><span class="eyebrow">Mapa</span><h3>Locais com mais caixas</h3></div><a class="mini-link" href="/?page=mapa_acervo">Abrir mapa</a></div>
+                <div class="rank-list compact">
+                    <?php $max = max(array_map(fn ($row) => (int) $row['caixas'], $map ?: [['caixas' => 0]])); ?>
+                    <?php foreach ($map as $row): ?><div class="rank-row"><span><?= h($row['localizacao']) ?></span><strong><?= h((string) $row['caixas']) ?></strong><i style="--w: <?= h((string) ($max ? max(4, round(((int) $row['caixas'] / $max) * 100)) : 0)) ?>%"></i></div><?php endforeach; ?>
+                </div>
+            </section>
+            <section class="dashboard-card wide">
+                <div class="dashboard-card-head"><div><span class="eyebrow">Timeline</span><h3>Últimos eventos</h3></div></div>
+                <div class="activity-list">
+                    <?php foreach ($events as $event): ?><article><strong><?= h($event['tipo']) ?></strong><span><?= h($event['mensagem']) ?></span><em><?= h($event['usuario_nome'] ?: $event['usuario_login'] ?: 'Sistema') ?> · <?= h($event['criado_em']) ?></em></article><?php endforeach; ?>
+                </div>
+            </section>
+        </div>
+    </section>
+    <?php
 }
 
 function render_sei_home_widget(): void
@@ -117,7 +199,7 @@ function render_sei_home_widget(): void
             <?php if ($isAdmin && $next): ?>
                 <form method="post" onsubmit="return confirm('Pular a vez deste usuario na demanda SEI?')">
                     <input type="hidden" name="action" value="skip_sei_demanda">
-                    <input type="hidden" name="return_page" value="busca">
+                    <input type="hidden" name="return_page" value="<?= h(current_page()) ?>">
                     <input type="hidden" name="usuario_login" value="<?= h((string) $next['login']) ?>">
                     <button type="submit">Pular</button>
                 </form>
@@ -146,7 +228,7 @@ function render_sei_queue_widget(): void
                 <p>Registre o processo atendido para liberar automaticamente o pr&oacute;ximo colega da fila.</p>
                 <form method="post" class="sei-demand-form">
                     <input type="hidden" name="action" value="save_sei_demanda">
-                    <input type="hidden" name="return_page" value="busca">
+                    <input type="hidden" name="return_page" value="<?= h(current_page()) ?>">
                     <input name="processo" inputmode="numeric" placeholder="00000.00000/0000-00" pattern="\d{5}\.\d{5}/\d{4}-\d{2}" required>
                     <button class="primary" type="submit">OK</button>
                 </form>
@@ -1037,6 +1119,117 @@ function render_dashboard(): void
                     </div>
                 <?php endif; ?>
             </section>
+        </div>
+    </section>
+    <?php
+}
+
+function render_diagnostico(): void
+{
+    $snapshot = diagnostic_snapshot();
+    $validations = planilha_validation_summary();
+    ?>
+    <section class="dashboard-page">
+        <div class="dashboard-hero">
+            <div>
+                <span class="eyebrow">Diagnóstico de Conexão</span>
+                <h2>Status do sistema</h2>
+                <p>Ambiente, banco, Supabase, jobs, eventos e validação das planilhas em um único lugar.</p>
+            </div>
+            <div class="dashboard-actions">
+                <form method="post" data-loading-label="Sincronizando...">
+                    <input type="hidden" name="action" value="sync_now">
+                    <input type="hidden" name="return_page" value="diagnostico">
+                    <button class="primary" type="submit">Sincronizar agora</button>
+                </form>
+                <a class="button" href="/?page=preview_export">Prévia de exportação</a>
+            </div>
+        </div>
+        <div class="dashboard-kpis">
+            <article class="kpi-card accent-blue"><span>Modo</span><strong><?= h($snapshot['railway'] ? 'Railway' : 'Local') ?></strong><small><?= h($snapshot['modo']) ?></small></article>
+            <article class="kpi-card accent-cyan"><span>Supabase</span><strong><?= h(supabase_enabled() ? 'ON' : 'OFF') ?></strong><small><?= h($snapshot['supabase']) ?></small></article>
+            <article class="kpi-card accent-green"><span>Busca FTS</span><strong><?= h($snapshot['fts'] ? 'Ativa' : 'LIKE') ?></strong><small>Índice textual inteligente</small></article>
+            <article class="kpi-card accent-red"><span>Banco</span><strong><?= h(number_format((int) $snapshot['db_size'] / 1024 / 1024, 1, ',', '.')) ?> MB</strong><small><?= h($snapshot['db_path']) ?></small></article>
+        </div>
+        <div class="dashboard-grid">
+            <section class="dashboard-card">
+                <div class="dashboard-card-head"><div><span class="eyebrow">Jobs</span><h3>Importações recentes</h3></div></div>
+                <div class="activity-list">
+                    <?php foreach ($snapshot['jobs'] as $job): ?><article><strong><?= h($job['status']) ?></strong><span><?= h($job['tipo']) ?> · <?= h((string) $job['total_registros']) ?> registro(s)</span><em><?= h($job['mensagem']) ?> · <?= h($job['concluido_em'] ?: $job['criado_em']) ?></em></article><?php endforeach; ?>
+                </div>
+            </section>
+            <section class="dashboard-card">
+                <div class="dashboard-card-head"><div><span class="eyebrow">Eventos</span><h3>Timeline técnica</h3></div></div>
+                <div class="activity-list">
+                    <?php foreach ($snapshot['eventos'] as $event): ?><article><strong><?= h($event['tipo']) ?></strong><span><?= h($event['mensagem']) ?></span><em><?= h($event['criado_em']) ?></em></article><?php endforeach; ?>
+                </div>
+            </section>
+            <section class="dashboard-card wide">
+                <div class="dashboard-card-head"><div><span class="eyebrow">Planilhas</span><h3>Validação de abas</h3></div></div>
+                <div class="activity-list">
+                    <?php foreach ($validations as $file): ?>
+                        <article>
+                            <strong><?= h($file['arquivo']) ?></strong>
+                            <span><?= h((string) count($file['abas'])) ?> aba(s) · <?= h($file['status']) ?></span>
+                            <em><?= h(implode(', ', array_map(fn ($sheet) => $sheet['nome'] . ' (' . $sheet['formato'] . ')', array_slice($file['abas'], 0, 8)))) ?><?= count($file['abas']) > 8 ? '...' : '' ?></em>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+            </section>
+        </div>
+    </section>
+    <?php
+}
+
+function render_mapa_acervo(): void
+{
+    $rows = acervo_map_data(30);
+    $max = max(array_map(fn ($row) => (int) $row['caixas'], $rows ?: [['caixas' => 0]]));
+    ?>
+    <section class="dashboard-page">
+        <div class="dashboard-hero">
+            <div><span class="eyebrow">Mapa do Acervo</span><h2>Distribuição por localização</h2><p>Um mapa operacional dos locais com maior concentração de caixas e itens.</p></div>
+        </div>
+        <div class="dashboard-grid">
+            <section class="dashboard-card wide">
+                <div class="rank-list">
+                    <?php foreach ($rows as $row): ?>
+                        <a class="rank-row" href="/?page=busca&localizacao=<?= h(urlencode($row['localizacao'])) ?>">
+                            <span><?= h($row['localizacao']) ?></span>
+                            <strong><?= h((string) $row['caixas']) ?> caixas · <?= h((string) $row['itens']) ?> itens</strong>
+                            <i style="--w: <?= h((string) ($max ? max(4, round(((int) $row['caixas'] / $max) * 100)) : 0)) ?>%"></i>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            </section>
+        </div>
+    </section>
+    <?php
+}
+
+function render_export_preview(): void
+{
+    $rows = db()->query("
+        SELECT UNIDADE, CAIXA, TEMPORALIDADE, PROCESSO, ASSUNTO, INTERESSADO, LOCALIZACAO
+        FROM acervo
+        ORDER BY CAIXA, ASSUNTO
+        LIMIT 25
+    ")->fetchAll();
+    $total = (int) db()->query('SELECT COUNT(*) FROM acervo')->fetchColumn();
+    ?>
+    <section class="panel">
+        <div class="dashboard-card-head">
+            <div><span class="eyebrow">Prévia de Exportação</span><h3>Relatório geral do acervo</h3></div>
+            <a class="button primary" href="/?export=acervo">Baixar Excel</a>
+        </div>
+        <p class="muted">O arquivo completo terá <?= h(number_format($total, 0, ',', '.')) ?> registro(s). Abaixo estão os primeiros 25 para conferência.</p>
+        <div class="table-wrap">
+            <table class="cadastros-table">
+                <thead><tr><th>Caixa</th><th>Processo</th><th>Interessado</th><th>Assunto</th><th>Localização</th><th>Temporalidade</th></tr></thead>
+                <tbody>
+                    <?php foreach ($rows as $row): ?><tr><td><?= h($row['CAIXA']) ?></td><td><?= h($row['PROCESSO']) ?></td><td><?= h($row['INTERESSADO']) ?></td><td><?= h($row['ASSUNTO']) ?></td><td><?= h($row['LOCALIZACAO']) ?></td><td><?= h($row['TEMPORALIDADE']) ?></td></tr><?php endforeach; ?>
+                </tbody>
+            </table>
         </div>
     </section>
     <?php

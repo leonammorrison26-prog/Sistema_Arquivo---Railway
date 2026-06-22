@@ -46,6 +46,8 @@ if (interface_exists(IReadFilter::class)) {
 
 function import_planilhas_on_login(bool $force = false): array
 {
+    allow_long_import_runtime($force ? 900 : 300);
+
     if (!is_dir(PLANILHAS_DIR)) {
         return ['enabled' => false, 'imported' => 0, 'files' => 0, 'reason' => 'Pasta de planilhas nao encontrada.'];
     }
@@ -73,11 +75,15 @@ function import_planilhas_on_login(bool $force = false): array
         return ['enabled' => true, 'imported' => 0, 'files' => count($files), 'skipped' => true];
     }
 
+    if ($force) {
+        clear_imported_planilha_rows();
+    }
+
     $imported = 0;
     $completed = true;
-    $deadline = microtime(true) + ($force ? 90 : 18);
+    $deadline = $force ? null : microtime(true) + 240;
     foreach ($files as $file) {
-        if (microtime(true) >= $deadline) {
+        if ($deadline !== null && microtime(true) >= $deadline) {
             $completed = false;
             break;
         }
@@ -115,8 +121,24 @@ function planilha_import_files(): array
         }
 
         $relative = normalize_search_text(str_replace(PLANILHAS_DIR . DIRECTORY_SEPARATOR, '', $file));
-        return !str_contains($relative, 'indicadores');
+        return !str_contains($relative, 'indicadores')
+            && !str_starts_with(normalize_search_text($name), 'indicadores');
     }));
+}
+
+function clear_imported_planilha_rows(): void
+{
+    db()->exec("
+        DELETE FROM acervo
+        WHERE ID_UNICO LIKE 'xlsx_%'
+           OR LOWER(COALESCE(FONTE_ARQUIVO, '')) LIKE '%.xlsx / %'
+    ");
+
+    try {
+        db()->exec('DELETE FROM acervo_fts');
+    } catch (Throwable) {
+        // FTS pode nao existir em alguns ambientes.
+    }
 }
 
 function indicador_planilha_files(): array
@@ -150,8 +172,22 @@ function xlsx_files_recursive(string $dir): array
     return array_values($files);
 }
 
+function allow_long_import_runtime(int $seconds): void
+{
+    if ($seconds <= 0) {
+        return;
+    }
+
+    @ini_set('max_execution_time', (string) $seconds);
+    if (function_exists('set_time_limit')) {
+        @set_time_limit($seconds);
+    }
+}
+
 function import_indicadores_planilhas(bool $force = false): array
 {
+    allow_long_import_runtime($force ? 180 : 120);
+
     $files = indicador_planilha_files();
     if (!$files) {
         return ['enabled' => true, 'imported' => 0, 'files' => 0, 'reason' => 'Nenhuma planilha de indicadores encontrada.'];
@@ -182,8 +218,7 @@ function import_indicadores_file(string $file): int
 
     foreach ($reader->listWorksheetInfo($file) as $sheetInfo) {
         $sheetName = (string) ($sheetInfo['worksheetName'] ?? '');
-        $normalized = normalize_search_text($sheetName);
-        if ($sheetName === '' || in_array($normalized, ['glossario', 'total', 'planilha1'], true)) {
+        if ($sheetName === '') {
             continue;
         }
 
@@ -210,6 +245,10 @@ function import_indicadores_sheet(string $file, Worksheet $sheet): int
         if (str_contains($header, 'total semana')) {
             $totalColumns[] = $column;
         }
+    }
+
+    if (!$totalColumns) {
+        return import_indicadores_summary_sheet($file, $sheet);
     }
 
     $imported = 0;
@@ -283,6 +322,63 @@ function import_indicadores_sheet(string $file, Worksheet $sheet): int
             'indicadores' => $indicadores,
             'labels' => $labels,
             'dias' => $dias,
+        ];
+
+        indicador_mirror_local([
+            'colaborador' => $sheet->getTitle(),
+            'data' => $periodo,
+            'dados_json' => json_encode($payload, JSON_UNESCAPED_UNICODE),
+            'criado_em' => date('c', (int) filemtime($file)),
+        ]);
+        $imported++;
+    }
+
+    return $imported;
+}
+
+function import_indicadores_summary_sheet(string $file, Worksheet $sheet): int
+{
+    $highestColumn = Coordinate::columnIndexFromString($sheet->getHighestColumn());
+    $highestRow = $sheet->getHighestRow();
+    $imported = 0;
+
+    for ($column = 2; $column <= $highestColumn; $column++) {
+        $periodo = trim((string) $sheet->getCell([$column, 1])->getFormattedValue());
+        if ($periodo === '' || normalize_search_text($periodo) === 'fonte') {
+            continue;
+        }
+
+        $indicadores = [];
+        $labels = [];
+        for ($row = 2; $row <= $highestRow; $row++) {
+            $label = trim((string) $sheet->getCell([1, $row])->getFormattedValue());
+            if ($label === '') {
+                continue;
+            }
+
+            $value = indicador_numeric_value($sheet->getCell([$column, $row])->getCalculatedValue());
+            if ($value === null || $value === 0) {
+                continue;
+            }
+
+            $key = indicador_key($label);
+            $indicadores[$key] = ($indicadores[$key] ?? 0) + $value;
+            $labels[$key] = $label;
+        }
+
+        if (!$indicadores) {
+            continue;
+        }
+
+        $payload = [
+            'origem' => 'planilha_indicadores',
+            'formato' => 'resumo_por_periodo',
+            'arquivo' => basename($file),
+            'aba' => $sheet->getTitle(),
+            'periodo' => $periodo,
+            'indicadores' => $indicadores,
+            'labels' => $labels,
+            'dias' => [],
         ];
 
         indicador_mirror_local([
@@ -386,7 +482,7 @@ function indicador_mirror_local(array $row): void
 
 function planilhas_fingerprint(array $files): string
 {
-    $parts = ['import-v2'];
+    $parts = ['import-v4-full'];
     sort($files);
     foreach ($files as $file) {
         $relative = str_replace((defined('PLANILHAS_DIR') ? PLANILHAS_DIR : dirname($file)) . DIRECTORY_SEPARATOR, '', $file);

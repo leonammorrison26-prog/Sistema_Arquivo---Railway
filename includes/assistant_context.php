@@ -9,7 +9,33 @@ function assistant_context(string $message): array
     return [
         'manuals' => assistant_manual_search($message, 6),
         'acervo' => assistant_acervo_context($message),
+        'attention' => attention_items(),
+        'memory' => assistant_memory_search($message, 4),
     ];
+}
+
+function assistant_memory_search(string $message, int $limit = 4): array
+{
+    $tokens = assistant_tokens($message);
+    if (!$tokens) {
+        return [];
+    }
+
+    $where = [];
+    $params = [];
+    foreach (array_slice($tokens, 0, 6) as $index => $token) {
+        $key = ':m' . $index;
+        $where[] = "(pergunta LIKE {$key} OR resposta LIKE {$key})";
+        $params[$key] = '%' . $token . '%';
+    }
+
+    $stmt = db()->prepare('SELECT pergunta, resposta, criado_em FROM assistant_memory WHERE ' . implode(' OR ', $where) . ' ORDER BY id DESC LIMIT :limit');
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value, PDO::PARAM_STR);
+    }
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetchAll();
 }
 
 function assistant_tokens(string $text): array
@@ -226,6 +252,28 @@ function assistant_context_prompt(array $context): string
         foreach ($acervo['samples'] as $row) {
             $lines[] = "  * CX {$row['CAIXA']} | {$row['PROCESSO']} | {$row['INTERESSADO']} | {$row['ASSUNTO']} | {$row['LOCALIZACAO']}";
         }
+    }
+
+    $attention = $context['attention'] ?? [];
+    $lines[] = "";
+    $lines[] = "PONTOS DE ATENCAO DO SISTEMA:";
+    if ($attention) {
+        foreach (array_slice($attention, 0, 8) as $item) {
+            $lines[] = "- {$item['label']}: {$item['value']}";
+        }
+    } else {
+        $lines[] = "- Nenhum alerta operacional critico no momento.";
+    }
+
+    $memory = $context['memory'] ?? [];
+    $lines[] = "";
+    $lines[] = "MEMORIA DE PERGUNTAS ANTERIORES:";
+    if ($memory) {
+        foreach ($memory as $item) {
+            $lines[] = "- Pergunta: {$item['pergunta']} | Resposta anterior: " . mb_substr((string) $item['resposta'], 0, 260);
+        }
+    } else {
+        $lines[] = "- Nenhuma pergunta parecida registrada.";
     }
 
     return implode("\n", $lines);

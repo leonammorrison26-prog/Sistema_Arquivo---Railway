@@ -16,6 +16,7 @@ function login_user(string $login, string $senha): bool
         }
         mirror_user_local($user);
         $_SESSION['user'] = $user;
+        system_event('login', 'Login realizado via Supabase', ['login' => trim($login)]);
         sync_after_login();
         return true;
     }
@@ -34,6 +35,7 @@ function login_user(string $login, string $senha): bool
     }
 
     $_SESSION['user'] = $user;
+    system_event('login', 'Login realizado no banco local', ['login' => trim($login)]);
     sync_after_login();
     return true;
 }
@@ -89,7 +91,9 @@ function change_logged_user_password(string $currentPassword, string $newPasswor
         throw new RuntimeException('Usuario sem login definido.');
     }
 
-    supabase_update_user_password($login, $newPassword);
+    if (supabase_enabled()) {
+        supabase_update_user_password($login, $newPassword);
+    }
 
     db()->prepare('UPDATE usuarios SET senha = :senha, TROCAR_SENHA = 0 WHERE login = :login COLLATE NOCASE')
         ->execute([':senha' => $newPassword, ':login' => $login]);
@@ -140,12 +144,22 @@ function sync_after_login(): void
 
 function sync_app_data(bool $forcePlanilhas = false): array
 {
+    $jobId = import_job_start($forcePlanilhas ? 'sincronizacao_manual' : 'sincronizacao_login', 0, $forcePlanilhas ? 'Sincronizacao manual' : 'Sincronizacao no login');
     $supabase = supabase_enabled()
         ? supabase_sync_on_login()
         : ['enabled' => false, 'usuarios' => 0, 'acervo' => 0];
 
-    $planilhas = import_planilhas_on_login($forcePlanilhas);
-    $indicadoresPlanilhas = import_indicadores_planilhas($forcePlanilhas);
+    try {
+        $planilhas = import_planilhas_on_login($forcePlanilhas);
+        $indicadoresPlanilhas = import_indicadores_planilhas($forcePlanilhas);
+        $total = (int) ($planilhas['imported'] ?? 0) + (int) ($indicadoresPlanilhas['imported'] ?? 0);
+        $completed = (($planilhas['completed'] ?? true) === true) && (($indicadoresPlanilhas['completed'] ?? true) === true);
+        import_job_finish($jobId, $completed ? 'concluido' : 'parcial', $total, $completed ? 'Sincronizacao concluida' : 'Sincronizacao parcial');
+        acervo_fts_rebuild();
+    } catch (Throwable $e) {
+        import_job_finish($jobId, 'erro', 0, $e->getMessage());
+        throw $e;
+    }
 
     return ['supabase' => $supabase, 'planilhas' => $planilhas, 'indicadores_planilhas' => $indicadoresPlanilhas];
 }
@@ -307,7 +321,7 @@ function render_login(): void
         <title><?= h(APP_BROWSER_TITLE) ?></title>
         <link rel="icon" type="image/svg+xml" href="<?= h(APP_FAVICON_DATA_URI) ?>">
         <meta name="theme-color" content="#111827">
-        <link rel="stylesheet" href="/assets/app.css">
+        <link rel="stylesheet" href="/assets/app.css?v=<?= h((string) @filemtime(ASSETS_DIR . DIRECTORY_SEPARATOR . 'app.css')) ?>">
     </head>
     <body class="login-screen">
         <div class="login-more">
@@ -364,7 +378,7 @@ function render_login(): void
                 </form>
             </section>
         </main>
-        <script src="/assets/app.js"></script>
+        <script src="/assets/app.js?v=<?= h((string) @filemtime(ASSETS_DIR . DIRECTORY_SEPARATOR . 'app.js')) ?>"></script>
     </body>
     </html>
     <?php

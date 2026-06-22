@@ -148,6 +148,42 @@ function migrate_db(PDO $pdo): void
         'criado_em' => "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
     ]);
 
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS eventos_sistema (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tipo TEXT NOT NULL DEFAULT 'info',
+            mensagem TEXT NOT NULL DEFAULT '',
+            contexto_json TEXT NOT NULL DEFAULT '{}',
+            usuario_login TEXT NOT NULL DEFAULT '',
+            usuario_nome TEXT NOT NULL DEFAULT '',
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS import_jobs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tipo TEXT NOT NULL DEFAULT 'planilhas',
+            status TEXT NOT NULL DEFAULT 'pendente',
+            total_arquivos INTEGER NOT NULL DEFAULT 0,
+            total_registros INTEGER NOT NULL DEFAULT 0,
+            mensagem TEXT NOT NULL DEFAULT '',
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            iniciado_em TEXT NOT NULL DEFAULT '',
+            concluido_em TEXT NOT NULL DEFAULT ''
+        )
+    ");
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS assistant_memory (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pergunta TEXT NOT NULL DEFAULT '',
+            resposta TEXT NOT NULL DEFAULT '',
+            contexto_json TEXT NOT NULL DEFAULT '{}',
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_acervo_caixa ON acervo (CAIXA)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_acervo_processo ON acervo (PROCESSO)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_acervo_assunto ON acervo (ASSUNTO)');
@@ -155,6 +191,15 @@ function migrate_db(PDO $pdo): void
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_acervo_texto ON acervo (TEXTO_GERAL)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_sei_atendimentos_criado ON sei_atendimentos (criado_em)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_sei_atendimentos_usuario ON sei_atendimentos (usuario_login)');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_eventos_sistema_criado ON eventos_sistema (criado_em)');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_eventos_sistema_tipo ON eventos_sistema (tipo)');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_import_jobs_status ON import_jobs (status)');
+
+    try {
+        $pdo->exec('CREATE VIRTUAL TABLE IF NOT EXISTS acervo_fts USING fts5(id_unico UNINDEXED, texto)');
+    } catch (Throwable) {
+        // FTS5 pode nao estar disponivel em alguns builds de SQLite.
+    }
 
     $exists = (int) $pdo->query("SELECT COUNT(*) FROM usuarios WHERE UPPER(login) = 'ADMIN'")->fetchColumn();
     if ($exists === 0) {

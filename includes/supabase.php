@@ -16,12 +16,16 @@ function supabase_key(): string
 
 function supabase_enabled(): bool
 {
-    return supabase_url() !== '' && supabase_key() !== '';
+    return app_running_on_railway() && supabase_url() !== '' && supabase_key() !== '';
 }
 
 function supabase_status(): string
 {
-    return supabase_enabled() ? 'conectado/configurado' : 'SUPABASE_URL e SUPABASE_KEY nao configurados';
+    if (!app_running_on_railway()) {
+        return 'modo local: usando banco SQLite';
+    }
+
+    return supabase_enabled() ? 'Railway: Supabase conectado/configurado' : 'Railway: SUPABASE_URL e SUPABASE_KEY nao configurados';
 }
 
 function supabase_request(string $method, string $table, array $payload = [], array $query = [], bool $mandatory = true): array

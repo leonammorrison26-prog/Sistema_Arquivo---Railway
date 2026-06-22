@@ -157,6 +157,18 @@ document.querySelectorAll('[data-dismiss-alert]').forEach((button) => {
     });
 });
 
+document.querySelectorAll('form').forEach((form) => {
+    form.addEventListener('submit', () => {
+        const button = form.querySelector('button[type="submit"], button:not([type])');
+        if (!button || button.dataset.loadingBound === '1') return;
+        button.dataset.loadingBound = '1';
+        button.dataset.originalText = button.textContent || '';
+        button.classList.add('is-loading');
+        button.disabled = true;
+        button.textContent = form.dataset.loadingLabel || 'Processando...';
+    });
+});
+
 document.querySelectorAll('.password-toggle').forEach((passwordToggle) => {
     passwordToggle.addEventListener('click', () => {
         const input = passwordToggle.closest('.password-field')?.querySelector('input');

@@ -27,7 +27,24 @@ define('BUNDLED_PLANILHAS_DIR', BASE_DIR . DIRECTORY_SEPARATOR . 'planilhas');
 define('ASSETS_DIR', BASE_DIR . DIRECTORY_SEPARATOR . 'assets');
 define('MANUAIS_DIR', BASE_DIR . DIRECTORY_SEPARATOR . 'manuais');
 
-$supabaseConfiguredAtBoot = (getenv('SUPABASE_URL') ?: '') !== ''
+function app_running_on_railway(): bool
+{
+    foreach (['RAILWAY_ENVIRONMENT', 'RAILWAY_ENVIRONMENT_NAME', 'RAILWAY_PROJECT_ID', 'RAILWAY_SERVICE_ID', 'RAILWAY_VOLUME_MOUNT_PATH'] as $name) {
+        if ((getenv($name) ?: '') !== '') {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function app_storage_mode(): string
+{
+    return app_running_on_railway() ? 'railway_supabase' : 'local_sqlite';
+}
+
+$supabaseConfiguredAtBoot = app_running_on_railway()
+    && (getenv('SUPABASE_URL') ?: '') !== ''
     && (
         (getenv('SUPABASE_KEY') ?: '') !== ''
         || (getenv('SUPABASE_ANON_KEY') ?: '') !== ''

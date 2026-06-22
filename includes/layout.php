@@ -7,6 +7,7 @@ require_once __DIR__ . '/actions.php';
 function render_header(string $title = APP_NAME): void
 {
     $user = $_SESSION['user'] ?? [];
+    $pageLabel = page_title_label(current_page());
     if (!headers_sent()) {
         header('Content-Type: text/html; charset=UTF-8');
     }
@@ -19,7 +20,7 @@ function render_header(string $title = APP_NAME): void
         <title><?= h(APP_BROWSER_TITLE) ?></title>
         <link rel="icon" type="image/svg+xml" href="<?= h(APP_FAVICON_DATA_URI) ?>">
         <meta name="theme-color" content="#111827">
-        <link rel="stylesheet" href="/assets/app.css">
+        <link rel="stylesheet" href="/assets/app.css?v=<?= h((string) @filemtime(ASSETS_DIR . DIRECTORY_SEPARATOR . 'app.css')) ?>">
     </head>
     <body>
     <script>
@@ -42,6 +43,7 @@ function render_header(string $title = APP_NAME): void
                 <div class="title-group">
                     <div>
                         <h1><?= h(APP_NAME) ?></h1>
+                        <p><?= h($pageLabel) ?></p>
                     </div>
                 </div>
                 <section class="top-user-card" aria-label="Usuario logado">
@@ -90,7 +92,7 @@ function render_header(string $title = APP_NAME): void
                     </div>
                 </div>
             </header>
-            <?php if (!supabase_enabled()): ?>
+            <?php if (app_running_on_railway() && !supabase_enabled()): ?>
                 <div class="alert danger dismissible-alert" role="alert">
                     <span>Supabase obrigatorio nao configurado: <?= h(supabase_status()) ?></span>
                     <button class="alert-close" type="button" aria-label="Fechar aviso" data-dismiss-alert>&times;</button>
@@ -136,7 +138,7 @@ function render_footer(): void
             <?php endif; ?>
         </main>
     </div>
-    <script src="/assets/app.js"></script>
+    <script src="/assets/app.js?v=<?= h((string) @filemtime(ASSETS_DIR . DIRECTORY_SEPARATOR . 'app.js')) ?>"></script>
     </body>
     </html>
     <?php
@@ -153,9 +155,48 @@ function sidebar_external(string $href, string $label, string $icon = '', string
     echo '<a class="side-button ' . h($extra) . '" href="' . h($href) . '" title="' . h($label) . '">' . side_icon($icon) . '<span class="side-label">' . h($label) . '</span></a>';
 }
 
+function page_title_label(string $page): string
+{
+    return [
+        'busca' => 'Pesquisa inteligente do acervo',
+        'central' => 'Central de trabalho e alertas',
+        'cad_caixa' => 'Cadastro manual de caixas',
+        'cad_processo' => 'Cadastro manual de processos',
+        'planilha' => 'Gestao de cadastros importados',
+        'gestao_usuarios' => 'Usuarios, permissoes e acessos',
+        'documentos' => 'Geracao de documentos e PDFs',
+        'indicadores_semanal' => 'Registro semanal de indicadores',
+        'dashboard' => 'Painel operacional DIARQ',
+        'diagnostico' => 'Conexao, banco e importacoes',
+        'mapa_acervo' => 'Mapa visual do acervo',
+        'preview_export' => 'Conferencia antes da exportacao',
+        'rel_temporalidade' => 'Itens sem temporalidade',
+        'rel_indicadores' => 'Relatorio de indicadores',
+        'rel_demanda_sei' => 'Demandas e fila do SEI',
+        'assistente_openai' => 'Assistente virtual DIARQ',
+        'trocar_senha' => 'Seguranca da conta',
+    ][$page] ?? 'Pesquisa inteligente do acervo';
+}
+
+function sidebar_image_icon(string $src, string $alt, string $extra = ''): string
+{
+    if ($src === '') {
+        return '';
+    }
+
+    $class = trim('side-image-icon ' . $extra);
+    return '<span class="' . h($class) . '" aria-hidden="true"><img src="' . h($src) . '" alt="' . h($alt) . '"></span>';
+}
+
 function sidebar_summary(string $label, string $icon): void
 {
     echo '<summary title="' . h($label) . '"><span class="nav-chevron">&gt;</span>' . side_icon($icon) . '<span class="side-label">' . h($label) . '</span></summary>';
+}
+
+function sidebar_summary_image(string $label, string $src, string $fallbackIcon, string $extra = ''): void
+{
+    $icon = sidebar_image_icon($src, $label, $extra) ?: side_icon($fallbackIcon);
+    echo '<summary title="' . h($label) . '"><span class="nav-chevron">&gt;</span>' . $icon . '<span class="side-label">' . h($label) . '</span></summary>';
 }
 
 function side_icon(string $icon): string
@@ -219,6 +260,12 @@ function render_sidebar(): void
     $logo = logo_data_uri();
     $seiLogoPath = ASSETS_DIR . DIRECTORY_SEPARATOR . 'LOGO_SEI-MDS.png';
     $seiLogo = is_file($seiLogoPath) ? 'data:image/png;base64,' . base64_encode((string) file_get_contents($seiLogoPath)) : '';
+    $assistantLogoPath = ASSETS_DIR . DIRECTORY_SEPARATOR . 'LOGO- IA.png';
+    $assistantLogo = is_file($assistantLogoPath) ? 'data:image/png;base64,' . base64_encode((string) file_get_contents($assistantLogoPath)) : '';
+    $pastaCompLogoPath = ASSETS_DIR . DIRECTORY_SEPARATOR . 'LOGO_PastaComp.png';
+    $pastaCompLogo = is_file($pastaCompLogoPath) ? 'data:image/png;base64,' . base64_encode((string) file_get_contents($pastaCompLogoPath)) : '';
+    $conexaoLogoPath = ASSETS_DIR . DIRECTORY_SEPARATOR . 'LOGO - Conecxao .jpg';
+    $conexaoLogo = is_file($conexaoLogoPath) ? 'data:image/jpeg;base64,' . base64_encode((string) file_get_contents($conexaoLogoPath)) : '';
     ?>
     <aside class="sidebar" aria-label="Sidebar de navegação">
         <button class="sidebar-toggle" type="button" aria-label="Recolher sidebar" title="Abrir ou recolher sidebar">
@@ -233,6 +280,12 @@ function render_sidebar(): void
                 <div class="brand">DIARQ</div>
             <?php endif; ?>
             <?php sidebar_link('busca', 'Voltar ao Inicio', 'home'); ?>
+            <?php sidebar_link('central', 'Central de Trabalho', 'dashboard'); ?>
+            <div class="side-status-card">
+                <span>Ambiente</span>
+                <strong><?= h(app_running_on_railway() ? 'Railway + Supabase' : 'Local + SQLite') ?></strong>
+                <small><?= h(supabase_enabled() ? 'Sincronizacao ativa' : 'Modo local protegido') ?></small>
+            </div>
 
             <div class="side-separator"></div>
 
@@ -268,7 +321,10 @@ function render_sidebar(): void
             <div class="side-separator"></div>
 
             <h3><?= side_icon('assistant') ?> Assistente Virtual</h3>
-            <?php sidebar_link('assistente_openai', 'Falar com Assistente', 'assistant'); ?>
+            <a class="side-button side-button-feature side-button-ai <?= current_page() === 'assistente_openai' ? 'active' : '' ?>" href="/?page=assistente_openai" title="Falar com Assistente">
+                <?= sidebar_image_icon($assistantLogo, 'IA', 'side-image-ai') ?: side_icon('assistant') ?>
+                <span class="side-label">Falar com Assistente</span>
+            </a>
 
             <div class="side-separator"></div>
 
@@ -281,7 +337,10 @@ function render_sidebar(): void
                 <?php endif; ?>
                 <span class="side-label">Abrir SEI - MDS</span>
             </a>
-            <?php sidebar_external('diarq://', 'Abrir Pasta Compart - Diarq', 'folder'); ?>
+            <a class="side-button side-button-feature side-button-pasta" href="diarq://" title="Abrir Pasta Compart - Diarq">
+                <?= sidebar_image_icon($pastaCompLogo, 'Pasta Compart', 'side-image-pasta') ?: side_icon('folder') ?>
+                <span class="side-label">Abrir Pasta Compart - Diarq</span>
+            </a>
             <?php if (!diarq_network_configured()): ?>
                 <a class="side-button" href="/configurar_diarq.bat" download title="Configurar Acesso à Rede"><?= side_icon('download') ?><span class="side-label">Configurar Acesso à Rede (Rodar uma vez)</span></a>
             <?php endif; ?>
@@ -290,16 +349,19 @@ function render_sidebar(): void
                 <?php sidebar_summary('Gerar Relatórios', 'chart'); ?>
                 <div class="nav-submenu">
                     <a class="side-button sub-button" href="/?export=acervo" title="Relatório Geral do Acervo"><?= side_icon('download') ?><span class="side-label">Relatório Geral do Acervo</span></a>
+                    <?php sidebar_link('preview_export', 'Prévia de Exportação', 'table'); ?>
                     <?php sidebar_link('rel_indicadores', 'Relatório Indicadores', 'chart'); ?>
                     <?php sidebar_link('rel_demanda_sei', 'Relatorio Demanda SEI', 'chart'); ?>
                     <?php sidebar_link('dashboard', 'Dashboard', 'dashboard'); ?>
+                    <?php sidebar_link('mapa_acervo', 'Mapa do Acervo', 'folder'); ?>
                 </div>
             </details>
 
             <?php if (user_is_admin() || (int) ($user['p_sincronizar'] ?? 0) === 1): ?>
                 <details class="nav-group">
-                    <?php sidebar_summary('Diagnóstico de Conexão', 'diagnostic'); ?>
+                    <?php sidebar_summary_image('Diagnóstico de Conexão', $conexaoLogo, 'diagnostic', 'side-image-conexao'); ?>
                     <div class="nav-submenu">
+                        <?php sidebar_link('diagnostico', 'Painel de Diagnóstico', 'diagnostic'); ?>
                         <?php sidebar_link('rel_temporalidade', 'Itens sem Temporalidade', 'table'); ?>
                         <div class="side-note">Supabase: <?= h(supabase_status()) ?></div>
                         <div class="side-note">Banco: <?= h(DB_PATH) ?></div>

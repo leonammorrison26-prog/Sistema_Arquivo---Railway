@@ -22,7 +22,25 @@ function h(mixed $value): string
 
 function current_page(): string
 {
-    return preg_replace('/[^a-z_]/', '', $_GET['page'] ?? 'busca') ?: 'busca';
+    if (isset($_GET['page'])) {
+        return preg_replace('/[^a-z_]/', '', $_GET['page']) ?: 'busca';
+    }
+
+    $path = trim((string) (parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/'), '/');
+    $routes = [
+        '' => 'busca',
+        'busca' => 'busca',
+        'central' => 'central',
+        'dashboard' => 'dashboard',
+        'diagnostico' => 'diagnostico',
+        'mapa-acervo' => 'mapa_acervo',
+        'assistente' => 'assistente_openai',
+        'acervo' => 'planilha',
+        'usuarios' => 'gestao_usuarios',
+        'indicadores' => 'rel_indicadores',
+    ];
+
+    return $routes[$path] ?? 'busca';
 }
 
 function redirect_to(string $page = 'busca'): never
@@ -417,6 +435,13 @@ function search_acervo(string $term, string $scope = 'geral', int $limit = 100):
     ];
     $columns = $scopeColumns[$scope] ?? $scopeColumns['geral'];
 
+    if ($scope === 'geral' && acervo_fts_available()) {
+        $fts = acervo_fts_search($term, $limit);
+        if ($fts) {
+            return $fts;
+        }
+    }
+
     $where = implode(' OR ', array_map(fn ($col) => "$col LIKE :term", $columns));
     $stmt = db()->prepare("SELECT * FROM acervo WHERE $where ORDER BY CAIXA, ASSUNTO LIMIT :limit");
     $stmt->bindValue(':term', '%' . $term . '%', PDO::PARAM_STR);
@@ -424,6 +449,259 @@ function search_acervo(string $term, string $scope = 'geral', int $limit = 100):
     $stmt->execute();
 
     return $stmt->fetchAll();
+}
+
+function search_acervo_filtered(array $input, int $limit = 150): array
+{
+    $where = [];
+    $params = [];
+    $fields = [
+        'q' => ['TEXTO_GERAL', 'UNIDADE', 'ASSUNTO', 'INTERESSADO', 'PROCESSO', 'CAIXA', 'LOCALIZACAO', 'OBSERVACAO'],
+        'caixa' => ['CAIXA'],
+        'processo' => ['PROCESSO'],
+        'interessado' => ['INTERESSADO'],
+        'localizacao' => ['LOCALIZACAO'],
+        'temporalidade' => ['TEMPORALIDADE'],
+    ];
+
+    foreach ($fields as $key => $columns) {
+        $value = trim((string) ($input[$key] ?? ''));
+        if ($value === '') {
+            continue;
+        }
+
+        $param = ':' . $key;
+        $where[] = '(' . implode(' OR ', array_map(fn ($col) => "COALESCE($col, '') LIKE $param", $columns)) . ')';
+        $params[$param] = '%' . $value . '%';
+    }
+
+    if (!$where) {
+        return [];
+    }
+
+    $stmt = db()->prepare('SELECT * FROM acervo WHERE ' . implode(' AND ', $where) . ' ORDER BY CAIXA, ASSUNTO LIMIT :limit');
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value, PDO::PARAM_STR);
+    }
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetchAll();
+}
+
+function acervo_fts_available(): bool
+{
+    try {
+        db()->query("SELECT name FROM sqlite_master WHERE name = 'acervo_fts'")->fetchColumn();
+        return (bool) db()->query("SELECT name FROM sqlite_master WHERE name = 'acervo_fts'")->fetchColumn();
+    } catch (Throwable) {
+        return false;
+    }
+}
+
+function acervo_fts_rebuild(): void
+{
+    if (!acervo_fts_available()) {
+        return;
+    }
+
+    try {
+        @ini_set('max_execution_time', '0');
+        @set_time_limit(0);
+        $pdo = db();
+        $current = (int) $pdo->query('SELECT COUNT(*) FROM acervo_fts')->fetchColumn();
+        $expected = (int) $pdo->query('SELECT COUNT(*) FROM acervo')->fetchColumn();
+        if ($current === $expected && $current > 0) {
+            return;
+        }
+        $pdo->exec('DELETE FROM acervo_fts');
+        $pdo->exec("
+            INSERT INTO acervo_fts (id_unico, texto)
+            SELECT ID_UNICO, LOWER(COALESCE(TEXTO_GERAL, '') || ' ' || COALESCE(UNIDADE, '') || ' ' || COALESCE(ASSUNTO, '') || ' ' || COALESCE(INTERESSADO, '') || ' ' || COALESCE(PROCESSO, '') || ' ' || COALESCE(CAIXA, '') || ' ' || COALESCE(LOCALIZACAO, '') || ' ' || COALESCE(OBSERVACAO, ''))
+            FROM acervo
+        ");
+    } catch (Throwable $e) {
+        system_event('fts_erro', 'Falha ao reconstruir indice de busca', ['erro' => $e->getMessage()]);
+    }
+}
+
+function acervo_fts_search(string $term, int $limit = 100): array
+{
+    acervo_fts_rebuild();
+    $tokens = array_values(array_filter(preg_split('/[^a-z0-9]+/i', normalize_search_text($term)) ?: [], fn ($token) => strlen((string) $token) >= 2));
+    if (!$tokens) {
+        return [];
+    }
+
+    $query = implode(' ', array_map(fn ($token) => $token . '*', array_slice($tokens, 0, 8)));
+    try {
+        $stmt = db()->prepare("
+            SELECT a.*
+            FROM acervo_fts f
+            JOIN acervo a ON a.ID_UNICO = f.id_unico
+            WHERE acervo_fts MATCH :query
+            ORDER BY rank, a.CAIXA, a.ASSUNTO
+            LIMIT :limit
+        ");
+        $stmt->bindValue(':query', $query, PDO::PARAM_STR);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    } catch (Throwable) {
+        return [];
+    }
+}
+
+function system_event(string $tipo, string $mensagem, array $contexto = []): void
+{
+    try {
+        $user = $_SESSION['user'] ?? [];
+        db()->prepare("
+            INSERT INTO eventos_sistema (tipo, mensagem, contexto_json, usuario_login, usuario_nome)
+            VALUES (:tipo, :mensagem, :contexto, :login, :nome)
+        ")->execute([
+            ':tipo' => $tipo,
+            ':mensagem' => $mensagem,
+            ':contexto' => json_encode($contexto, JSON_UNESCAPED_UNICODE) ?: '{}',
+            ':login' => (string) ($user['login'] ?? ''),
+            ':nome' => (string) ($user['nome'] ?? ''),
+        ]);
+    } catch (Throwable) {
+    }
+}
+
+function recent_system_events(int $limit = 20): array
+{
+    $stmt = db()->prepare('SELECT * FROM eventos_sistema ORDER BY id DESC LIMIT :limit');
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetchAll();
+}
+
+function import_job_start(string $tipo, int $totalArquivos = 0, string $mensagem = ''): int
+{
+    db()->prepare("
+        INSERT INTO import_jobs (tipo, status, total_arquivos, mensagem, iniciado_em)
+        VALUES (:tipo, 'processando', :arquivos, :mensagem, :iniciado)
+    ")->execute([
+        ':tipo' => $tipo,
+        ':arquivos' => $totalArquivos,
+        ':mensagem' => $mensagem,
+        ':iniciado' => date('c'),
+    ]);
+    $id = (int) db()->lastInsertId();
+    system_event('importacao_inicio', 'Importacao iniciada', ['job_id' => $id, 'tipo' => $tipo]);
+    return $id;
+}
+
+function import_job_finish(int $id, string $status, int $totalRegistros, string $mensagem = ''): void
+{
+    db()->prepare("
+        UPDATE import_jobs
+        SET status = :status, total_registros = :registros, mensagem = :mensagem, concluido_em = :concluido
+        WHERE id = :id
+    ")->execute([
+        ':status' => $status,
+        ':registros' => $totalRegistros,
+        ':mensagem' => $mensagem,
+        ':concluido' => date('c'),
+        ':id' => $id,
+    ]);
+    system_event('importacao_' . $status, 'Importacao ' . $status, ['job_id' => $id, 'registros' => $totalRegistros, 'mensagem' => $mensagem]);
+}
+
+function recent_import_jobs(int $limit = 8): array
+{
+    $stmt = db()->prepare('SELECT * FROM import_jobs ORDER BY id DESC LIMIT :limit');
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetchAll();
+}
+
+function attention_items(): array
+{
+    $pdo = db();
+    $items = [];
+    $checks = [
+        ['sem_temporalidade', 'Caixas/itens sem temporalidade', "SELECT COUNT(*) FROM acervo WHERE TRIM(COALESCE(TEMPORALIDADE, '')) = '' OR TEMPORALIDADE = '---' OR LOWER(TEMPORALIDADE) = 'nan'", '/?page=rel_temporalidade'],
+        ['sem_localizacao', 'Itens sem localizacao', "SELECT COUNT(*) FROM acervo WHERE TRIM(COALESCE(LOCALIZACAO, '')) = '' OR LOCALIZACAO = '---'", '/?page=busca&scope=caixas&q=---'],
+        ['sem_assunto', 'Itens sem assunto', "SELECT COUNT(*) FROM acervo WHERE TRIM(COALESCE(ASSUNTO, '')) = '' OR ASSUNTO = '---'", '/?page=busca&scope=geral&q=---'],
+        ['senha_padrao', 'Usuarios ainda com senha padrao', "SELECT COUNT(*) FROM usuarios WHERE senha = '123456' OR TROCAR_SENHA = 1", '/?page=gestao_usuarios'],
+        ['importacoes_parciais', 'Importacoes pendentes/parciais', "SELECT COUNT(*) FROM import_jobs WHERE status <> 'concluido'", '/?page=diagnostico'],
+    ];
+
+    foreach ($checks as [$key, $label, $sql, $href]) {
+        $value = (int) $pdo->query($sql)->fetchColumn();
+        if ($value > 0) {
+            $items[] = ['key' => $key, 'label' => $label, 'value' => $value, 'href' => $href];
+        }
+    }
+
+    return $items;
+}
+
+function acervo_map_data(int $limit = 14): array
+{
+    $stmt = db()->prepare("
+        SELECT COALESCE(NULLIF(TRIM(LOCALIZACAO), ''), 'Sem localizacao') AS localizacao,
+               COUNT(DISTINCT CAIXA) AS caixas,
+               COUNT(*) AS itens
+        FROM acervo
+        GROUP BY COALESCE(NULLIF(TRIM(LOCALIZACAO), ''), 'Sem localizacao')
+        ORDER BY caixas DESC, itens DESC
+        LIMIT :limit
+    ");
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetchAll();
+}
+
+function diagnostic_snapshot(): array
+{
+    $files = function_exists('planilha_import_files') ? planilha_import_files() : [];
+    $indicadores = function_exists('indicador_planilha_files') ? indicador_planilha_files() : [];
+    return [
+        'modo' => app_storage_mode(),
+        'railway' => app_running_on_railway(),
+        'supabase' => supabase_status(),
+        'db_path' => DB_PATH,
+        'db_size' => is_file(DB_PATH) ? filesize(DB_PATH) : 0,
+        'fts' => acervo_fts_available(),
+        'planilhas' => count($files),
+        'indicadores_planilhas' => count($indicadores),
+        'jobs' => recent_import_jobs(6),
+        'eventos' => recent_system_events(10),
+    ];
+}
+
+function planilha_validation_summary(): array
+{
+    if (!function_exists('indicador_planilha_files')) {
+        return [];
+    }
+
+    $rows = [];
+    foreach (indicador_planilha_files() as $file) {
+        try {
+            $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($file);
+            $sheets = [];
+            foreach ($reader->listWorksheetInfo($file) as $sheet) {
+                $name = (string) ($sheet['worksheetName'] ?? '');
+                if ($name === '') {
+                    continue;
+                }
+                $sheets[] = [
+                    'nome' => $name,
+                    'linhas' => (int) ($sheet['totalRows'] ?? 0),
+                    'colunas' => (int) ($sheet['totalColumns'] ?? 0),
+                    'formato' => normalize_search_text($name) === 'total' ? 'resumo' : 'semanal',
+                ];
+            }
+            $rows[] = ['arquivo' => basename($file), 'status' => 'ok', 'abas' => $sheets, 'erro' => ''];
+        } catch (Throwable $e) {
+            $rows[] = ['arquivo' => basename($file), 'status' => 'erro', 'abas' => [], 'erro' => $e->getMessage()];
+        }
+    }
+    return $rows;
 }
 
 function acervo_totals(): array
@@ -434,6 +712,8 @@ function acervo_totals(): array
         FROM acervo
         WHERE LOWER(COALESCE(ASSUNTO, '') || ' ' || COALESCE(OBSERVACAO, '') || ' ' || COALESCE(FONTE_ARQUIVO, '')) LIKE '%pasta funcional%'
            OR LOWER(COALESCE(ASSUNTO, '') || ' ' || COALESCE(OBSERVACAO, '') || ' ' || COALESCE(FONTE_ARQUIVO, '')) LIKE '%pastas funcionais%'
+           OR LOWER(COALESCE(ASSUNTO, '') || ' ' || COALESCE(OBSERVACAO, '') || ' ' || COALESCE(FONTE_ARQUIVO, '')) LIKE '%pasta_funcional%'
+           OR LOWER(COALESCE(ASSUNTO, '') || ' ' || COALESCE(OBSERVACAO, '') || ' ' || COALESCE(FONTE_ARQUIVO, '')) LIKE '%pastas_funcionais%'
     ")->fetchColumn();
 
     if ($pastasFuncionais === 0) {
@@ -447,8 +727,8 @@ function acervo_totals(): array
 
     return [
         'itens' => (int) $pdo->query('SELECT COUNT(*) FROM acervo')->fetchColumn(),
-        'caixas' => (int) $pdo->query("SELECT COUNT(DISTINCT CAIXA) FROM acervo WHERE TRIM(COALESCE(CAIXA, '')) <> '' AND TRIM(CAIXA) <> '---'")->fetchColumn(),
-        'processos' => (int) $pdo->query("SELECT COUNT(*) FROM acervo WHERE COALESCE(PROCESSO, '') <> '' AND PROCESSO <> '---'")->fetchColumn(),
+        'caixas' => (int) $pdo->query("SELECT COUNT(DISTINCT TRIM(CAIXA)) FROM acervo WHERE TRIM(COALESCE(CAIXA, '')) <> '' AND UPPER(TRIM(CAIXA)) NOT IN ('---', 'NAN', 'NONE')")->fetchColumn(),
+        'processos' => (int) $pdo->query("SELECT COUNT(DISTINCT TRIM(PROCESSO)) FROM acervo WHERE TRIM(COALESCE(PROCESSO, '')) <> '' AND UPPER(TRIM(PROCESSO)) NOT IN ('---', 'NAN', 'NONE')")->fetchColumn(),
         'pastas_funcionais' => $pastasFuncionais,
         'usuarios' => (int) $pdo->query('SELECT COUNT(*) FROM usuarios')->fetchColumn(),
         'indicadores' => (int) $pdo->query('SELECT COUNT(*) FROM indicadores')->fetchColumn(),
