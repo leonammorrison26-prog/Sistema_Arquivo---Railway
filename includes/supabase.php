@@ -61,7 +61,8 @@ function supabase_request(string $method, string $table, array $payload = [], ar
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_CUSTOMREQUEST => strtoupper($method),
         CURLOPT_HTTPHEADER => $headers,
-        CURLOPT_TIMEOUT => 45,
+        CURLOPT_CONNECTTIMEOUT => $mandatory ? 8 : 2,
+        CURLOPT_TIMEOUT => $mandatory ? 30 : 6,
     ]);
 
     if (in_array(strtoupper($method), ['POST', 'PATCH', 'PUT'], true)) {
@@ -91,7 +92,7 @@ function supabase_fetch_user(string $login, string $senha): ?array
         return null;
     }
 
-    foreach (['login', 'utilizador', 'usuario'] as $column) {
+    foreach (['usuario', 'login', 'utilizador'] as $column) {
         $rows = supabase_request('GET', 'usuarios', [], [
             'select' => '*',
             $column => 'ilike.' . $login,

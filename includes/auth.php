@@ -8,8 +8,16 @@ require_once __DIR__ . '/import.php';
 
 function login_user(string $login, string $senha): bool
 {
-    $supabaseUser = supabase_fetch_user(trim($login), $senha);
-    if ($supabaseUser) {
+    $stmt = db()->prepare('SELECT * FROM usuarios WHERE login = :login COLLATE NOCASE AND senha = :senha LIMIT 1');
+    $stmt->execute([':login' => trim($login), ':senha' => $senha]);
+    $user = $stmt->fetch();
+
+    if (!$user) {
+        $supabaseUser = supabase_fetch_user(trim($login), $senha);
+        if (!$supabaseUser) {
+            return false;
+        }
+
         $user = normalize_remote_user($supabaseUser);
         if (is_default_password($user['senha'] ?? '')) {
             $user['TROCAR_SENHA'] = 1;
@@ -17,16 +25,7 @@ function login_user(string $login, string $senha): bool
         mirror_user_local($user);
         $_SESSION['user'] = $user;
         system_event('login', 'Login realizado via Supabase', ['login' => trim($login)]);
-        sync_after_login();
         return true;
-    }
-
-    $stmt = db()->prepare('SELECT * FROM usuarios WHERE login = :login COLLATE NOCASE AND senha = :senha LIMIT 1');
-    $stmt->execute([':login' => trim($login), ':senha' => $senha]);
-    $user = $stmt->fetch();
-
-    if (!$user) {
-        return false;
     }
 
     if (is_default_password($user['senha'] ?? '')) {
@@ -36,7 +35,6 @@ function login_user(string $login, string $senha): bool
 
     $_SESSION['user'] = $user;
     system_event('login', 'Login realizado no banco local', ['login' => trim($login)]);
-    sync_after_login();
     return true;
 }
 
