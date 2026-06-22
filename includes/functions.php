@@ -335,9 +335,10 @@ function temporalidade_index(): array
     return $index = is_array($decoded) ? $decoded : [];
 }
 
-function temporalidade_suggestion(array $row): ?array
+function temporalidade_suggestion(array $row, string $context = ''): ?array
 {
     $query = normalize_search_text(implode(' ', [
+        $context,
         $row['ASSUNTO'] ?? '',
         $row['INTERESSADO'] ?? '',
         $row['OBSERVACAO'] ?? '',

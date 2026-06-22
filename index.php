@@ -104,7 +104,7 @@ function render_busca(): void
         <div class="alert">Nenhum documento encontrado para este termo em todo o acervo.</div>
     <?php else: ?>
         <div class="alert success"><?= count($results) ?> item(ns) encontrado(s). Mostrando os primeiros 100 resultados.</div>
-        <?php foreach ($results as $row): render_acervo_card($row); endforeach; ?>
+        <?php foreach ($results as $row): render_acervo_card($row, $term); endforeach; ?>
     <?php endif;
 }
 
@@ -260,12 +260,12 @@ function render_sei_queue_widget(): void
     <?php
 }
 
-function render_acervo_card(array $row): void
+function render_acervo_card(array $row, string $searchContext = ''): void
 {
     $status = trim((string) ($row['STATUS_EMPRESTIMO'] ?? ''));
     $displayStatus = $status === '' || $status === '---' ? 'DISPONIVEL' : $status;
     $tipoDoc = trim((string) ($row['PROCESSO'] ?? '')) !== '' && ($row['PROCESSO'] ?? '') !== '---' ? 'PROCESSOS' : 'DOCUMENTOS';
-    $tempSuggestion = temporalidade_suggestion($row);
+    $tempSuggestion = temporalidade_suggestion($row, $searchContext);
     ?>
     <details class="result-card">
         <summary class="result-summary">
