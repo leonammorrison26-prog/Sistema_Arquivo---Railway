@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__);
-$source = $root . DIRECTORY_SEPARATOR . 'banco_diarq.db';
-$targetDir = $root . DIRECTORY_SEPARATOR . 'storage';
-$target = $targetDir . DIRECTORY_SEPARATOR . 'seed_backup.sqlite';
+$source = $argv[1] ?? ($root . DIRECTORY_SEPARATOR . 'banco_diarq.db');
+$target = $argv[2] ?? ($root . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'seed_backup.sqlite');
+$targetDir = dirname($target);
 
 if (!is_file($source)) {
     fwrite(STDERR, "Fonte nao encontrada: {$source}\n");
