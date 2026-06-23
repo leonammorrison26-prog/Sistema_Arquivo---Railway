@@ -5018,25 +5018,34 @@ body.theme-light .more-menu {
         overflow-wrap: anywhere;
     }
 
+    .main > .acervo-summary,
+    .app-shell.sidebar-collapsed .acervo-summary,
+    .app-shell:not(.sidebar-collapsed) .acervo-summary,
     .acervo-summary {
         position: static !important;
         left: auto !important;
         right: auto !important;
         bottom: auto !important;
         width: 100% !important;
-        max-width: none !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
         grid-template-columns: minmax(0, 1fr) !important;
         gap: 8px !important;
         margin: 16px 0 0 !important;
         padding: 10px !important;
         transform: none !important;
+        box-sizing: border-box;
     }
 
     .summary-item {
+        width: 100%;
         min-width: 0;
-        grid-template-columns: minmax(0, 1fr) auto;
+        max-width: 100%;
+        display: flex !important;
         align-items: center;
-        justify-items: stretch;
+        justify-content: space-between;
         gap: 8px;
         min-height: 46px;
         padding: 8px 10px;
@@ -5047,13 +5056,18 @@ body.theme-light .more-menu {
     }
 
     .summary-item span {
+        min-width: 0;
+        display: block;
         white-space: normal;
         font-size: .74rem;
         line-height: 1.18;
-        overflow-wrap: anywhere;
+        overflow-wrap: normal;
+        word-break: normal;
+        writing-mode: horizontal-tb !important;
     }
 
     .summary-item strong {
+        flex: 0 0 auto;
         font-size: 1.12rem;
         line-height: 1.05;
         text-align: right;
