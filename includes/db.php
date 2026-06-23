@@ -184,6 +184,33 @@ function migrate_db(PDO $pdo): void
         )
     ");
 
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS acervo_mapa_posicoes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sala TEXT NOT NULL DEFAULT '',
+            tipo TEXT NOT NULL DEFAULT 'modulo_deslizante',
+            numero TEXT NOT NULL DEFAULT '',
+            prateleiras INTEGER NOT NULL DEFAULT 1,
+            capacidade_por_prateleira INTEGER NOT NULL DEFAULT 1,
+            caixas_ocupadas INTEGER NOT NULL DEFAULT 0,
+            observacao TEXT NOT NULL DEFAULT '',
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+
+    ensure_columns($pdo, 'acervo_mapa_posicoes', [
+        'sala' => "TEXT NOT NULL DEFAULT ''",
+        'tipo' => "TEXT NOT NULL DEFAULT 'modulo_deslizante'",
+        'numero' => "TEXT NOT NULL DEFAULT ''",
+        'prateleiras' => "INTEGER NOT NULL DEFAULT 1",
+        'capacidade_por_prateleira' => "INTEGER NOT NULL DEFAULT 1",
+        'caixas_ocupadas' => "INTEGER NOT NULL DEFAULT 0",
+        'observacao' => "TEXT NOT NULL DEFAULT ''",
+        'criado_em' => "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
+        'atualizado_em' => "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
+    ]);
+
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_acervo_caixa ON acervo (CAIXA)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_acervo_processo ON acervo (PROCESSO)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_acervo_assunto ON acervo (ASSUNTO)');
@@ -194,6 +221,8 @@ function migrate_db(PDO $pdo): void
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_eventos_sistema_criado ON eventos_sistema (criado_em)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_eventos_sistema_tipo ON eventos_sistema (tipo)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_import_jobs_status ON import_jobs (status)');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_acervo_mapa_sala ON acervo_mapa_posicoes (sala)');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_acervo_mapa_tipo ON acervo_mapa_posicoes (tipo)');
 
     try {
         $pdo->exec('CREATE VIRTUAL TABLE IF NOT EXISTS acervo_fts USING fts5(id_unico UNINDEXED, texto)');

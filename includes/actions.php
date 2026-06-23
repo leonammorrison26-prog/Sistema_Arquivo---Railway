@@ -156,6 +156,16 @@ function handle_actions(): void
             save_indicadores();
             redirect_to('indicadores_semanal');
         }
+
+        if ($action === 'save_mapa_posicao') {
+            save_mapa_posicao();
+            redirect_to('mapa_acervo');
+        }
+
+        if ($action === 'delete_mapa_posicao') {
+            delete_mapa_posicao();
+            redirect_to('mapa_acervo');
+        }
     } catch (Throwable $e) {
         $_SESSION['flash_error'] = $e->getMessage();
         redirect_to($_POST['return_page'] ?? current_page());
@@ -503,6 +513,84 @@ function save_indicadores(): void
 
     $_SESSION['flash_success'] = 'Registro diario de indicadores salvo com sucesso.';
     system_event('indicadores_salvo', 'Registro diario de indicadores salvo', ['colaborador' => $row['colaborador'], 'data' => $row['data']]);
+}
+
+function save_mapa_posicao(): void
+{
+    $id = max(0, (int) ($_POST['id'] ?? 0));
+    $sala = trim((string) ($_POST['sala'] ?? ''));
+    $tipo = trim((string) ($_POST['tipo'] ?? 'modulo_deslizante'));
+    $numero = trim((string) ($_POST['numero'] ?? ''));
+    $prateleiras = max(1, (int) ($_POST['prateleiras'] ?? 1));
+    $capacidade = max(1, (int) ($_POST['capacidade_por_prateleira'] ?? 1));
+    $caixas = max(0, (int) ($_POST['caixas_ocupadas'] ?? 0));
+    $observacao = trim((string) ($_POST['observacao'] ?? ''));
+
+    if ($sala === '') {
+        throw new RuntimeException('Informe a sala.');
+    }
+    if (!in_array($tipo, ['modulo_deslizante', 'estante'], true)) {
+        throw new RuntimeException('Tipo de estrutura invalido.');
+    }
+    if ($numero === '') {
+        throw new RuntimeException('Informe o numero da estante ou modulo.');
+    }
+
+    $total = $prateleiras * $capacidade;
+    if ($caixas > $total) {
+        throw new RuntimeException('As caixas ocupadas nao podem passar da capacidade total de ' . $total . '.');
+    }
+
+    $params = [
+        ':sala' => $sala,
+        ':tipo' => $tipo,
+        ':numero' => $numero,
+        ':prateleiras' => $prateleiras,
+        ':capacidade_por_prateleira' => $capacidade,
+        ':caixas_ocupadas' => $caixas,
+        ':observacao' => $observacao,
+        ':atualizado_em' => date('Y-m-d H:i:s'),
+    ];
+
+    if ($id > 0) {
+        $params[':id'] = $id;
+        db()->prepare("
+            UPDATE acervo_mapa_posicoes SET
+                sala = :sala,
+                tipo = :tipo,
+                numero = :numero,
+                prateleiras = :prateleiras,
+                capacidade_por_prateleira = :capacidade_por_prateleira,
+                caixas_ocupadas = :caixas_ocupadas,
+                observacao = :observacao,
+                atualizado_em = :atualizado_em
+            WHERE id = :id
+        ")->execute($params);
+        $_SESSION['flash_success'] = 'Posicao do mapa atualizada.';
+        system_event('mapa_acervo_atualizado', 'Posicao fisica atualizada', ['id' => $id, 'sala' => $sala, 'numero' => $numero]);
+        return;
+    }
+
+    db()->prepare("
+        INSERT INTO acervo_mapa_posicoes
+            (sala, tipo, numero, prateleiras, capacidade_por_prateleira, caixas_ocupadas, observacao, criado_em, atualizado_em)
+        VALUES
+            (:sala, :tipo, :numero, :prateleiras, :capacidade_por_prateleira, :caixas_ocupadas, :observacao, :atualizado_em, :atualizado_em)
+    ")->execute($params);
+    $_SESSION['flash_success'] = 'Posicao adicionada ao mapa.';
+    system_event('mapa_acervo_criado', 'Posicao fisica criada', ['sala' => $sala, 'numero' => $numero]);
+}
+
+function delete_mapa_posicao(): void
+{
+    $id = max(0, (int) ($_POST['id'] ?? 0));
+    if ($id <= 0) {
+        throw new RuntimeException('Posicao nao encontrada.');
+    }
+
+    db()->prepare('DELETE FROM acervo_mapa_posicoes WHERE id = :id')->execute([':id' => $id]);
+    $_SESSION['flash_success'] = 'Posicao removida do mapa.';
+    system_event('mapa_acervo_excluido', 'Posicao fisica excluida', ['id' => $id]);
 }
 
 function save_user(): void

@@ -656,6 +656,81 @@ function acervo_map_data(int $limit = 14): array
     return $stmt->fetchAll();
 }
 
+function mapa_acervo_posicoes(): array
+{
+    return db()->query("
+        SELECT *
+        FROM acervo_mapa_posicoes
+        ORDER BY sala COLLATE NOCASE, tipo COLLATE NOCASE, numero COLLATE NOCASE, id
+    ")->fetchAll();
+}
+
+function mapa_acervo_posicao(int $id): ?array
+{
+    if ($id <= 0) {
+        return null;
+    }
+
+    $stmt = db()->prepare('SELECT * FROM acervo_mapa_posicoes WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+    return $row ?: null;
+}
+
+function mapa_acervo_por_sala(array $rows): array
+{
+    $salas = [];
+    foreach ($rows as $row) {
+        $sala = trim((string) ($row['sala'] ?? '')) ?: 'Sem sala';
+        $row['capacidade_total'] = mapa_acervo_capacidade_total($row);
+        $row['vagas_livres'] = max(0, $row['capacidade_total'] - (int) ($row['caixas_ocupadas'] ?? 0));
+        $salas[$sala][] = $row;
+    }
+
+    return $salas;
+}
+
+function mapa_acervo_resumo(array $rows): array
+{
+    $resumo = [
+        'salas' => 0,
+        'estruturas' => count($rows),
+        'estantes' => 0,
+        'modulos' => 0,
+        'prateleiras' => 0,
+        'capacidade' => 0,
+        'ocupadas' => 0,
+        'livres' => 0,
+    ];
+    $salas = [];
+
+    foreach ($rows as $row) {
+        $salas[trim((string) ($row['sala'] ?? '')) ?: 'Sem sala'] = true;
+        if (($row['tipo'] ?? '') === 'estante') {
+            $resumo['estantes']++;
+        } else {
+            $resumo['modulos']++;
+        }
+        $resumo['prateleiras'] += (int) ($row['prateleiras'] ?? 0);
+        $resumo['capacidade'] += mapa_acervo_capacidade_total($row);
+        $resumo['ocupadas'] += (int) ($row['caixas_ocupadas'] ?? 0);
+    }
+
+    $resumo['salas'] = count($salas);
+    $resumo['livres'] = max(0, $resumo['capacidade'] - $resumo['ocupadas']);
+    return $resumo;
+}
+
+function mapa_acervo_capacidade_total(array $row): int
+{
+    return max(1, (int) ($row['prateleiras'] ?? 1)) * max(1, (int) ($row['capacidade_por_prateleira'] ?? 1));
+}
+
+function mapa_acervo_tipo_label(string $tipo): string
+{
+    return $tipo === 'estante' ? 'Estante' : 'Modulo deslizante';
+}
+
 function diagnostic_snapshot(): array
 {
     $files = function_exists('planilha_import_files') ? planilha_import_files() : [];
