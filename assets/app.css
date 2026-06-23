@@ -4901,6 +4901,12 @@ body.theme-light .more-menu {
     .main,
     .panel,
     .empty-state,
+    .search-bar,
+    .advanced-filters,
+    .filter-grid,
+    .dashboard-actions,
+    .result-card,
+    .result-detail-form,
     .page-title {
         min-width: 0;
         max-width: 100%;
@@ -4908,11 +4914,37 @@ body.theme-light .more-menu {
 
     .main {
         overflow-x: hidden;
-        padding-inline: 14px;
+        padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right));
     }
 
     .panel {
         overflow: hidden;
+    }
+
+    .page-title {
+        grid-template-columns: minmax(0, 1fr) 42px;
+        overflow: visible;
+    }
+
+    .title-group {
+        min-width: 0;
+        padding-left: 48px;
+    }
+
+    .page-title h1,
+    .title-group p,
+    .top-user-main strong,
+    .top-user-main span {
+        overflow-wrap: anywhere;
+    }
+
+    .top-user-card {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .app-more {
+        min-width: 0;
     }
 
     .tabs {
@@ -4930,6 +4962,48 @@ body.theme-light .more-menu {
     .tabs a {
         flex: 0 0 auto;
         white-space: nowrap;
+    }
+
+    .search-bar,
+    .filter-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    .search-bar > *,
+    .advanced-filters,
+    .advanced-filters summary,
+    .filter-grid label {
+        min-width: 0;
+    }
+
+    .search-bar button,
+    .search-bar .button,
+    .search-bar .icon-button,
+    .dashboard-actions .button,
+    .dashboard-actions button {
+        width: 100%;
+    }
+
+    .dashboard-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .result-summary {
+        min-width: 0;
+    }
+
+    .result-chevron,
+    .result-box-icon,
+    .result-doc-icon,
+    .result-box,
+    .result-status {
+        flex-shrink: 0;
+    }
+
+    .result-subject {
+        min-width: 0;
+        overflow-wrap: anywhere;
     }
 
     .acervo-summary {
@@ -4959,6 +5033,29 @@ body.theme-light .more-menu {
         font-size: 1.05rem;
         line-height: 1.05;
     }
+
+    .sei-home-card {
+        position: static !important;
+        left: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+        width: 100% !important;
+        max-width: none !important;
+        margin: 14px 0 0 !important;
+        transform: none !important;
+    }
+
+    .sei-home-form,
+    .sei-home-actions {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .sei-home-form input,
+    .sei-home-form button,
+    .sei-home-actions a,
+    .sei-home-actions button {
+        width: 100%;
+    }
 }
 
 @media (max-width: 420px) {
@@ -4972,5 +5069,22 @@ body.theme-light .more-menu {
 
     .summary-item strong {
         font-size: .95rem;
+    }
+
+    .page-title {
+        gap: 8px;
+        padding-inline: 10px;
+    }
+
+    .title-group {
+        padding-left: 44px;
+    }
+
+    .top-user-card {
+        grid-template-columns: 24px minmax(0, 1fr);
+    }
+
+    .top-user-status {
+        display: none;
     }
 }
