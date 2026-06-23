@@ -44,6 +44,27 @@ function handle_actions(): void
         );
     }
 
+    if (($_GET['export'] ?? '') === 'locais_vazios') {
+        require_once __DIR__ . '/export.php';
+        if (trim((string) ($_GET['format'] ?? '')) === 'pdf') {
+            require_once __DIR__ . '/pdf.php';
+            output_locais_vazios_pdf(locais_vazios_rows());
+        }
+
+        export_xlsx('locais_vazios_' . date('dmY') . '.xlsx', locais_vazios_rows(), 'Locais Vazios');
+    }
+
+    if (($_GET['export'] ?? '') === 'mapa_vazios') {
+        require_once __DIR__ . '/export.php';
+        $rows = mapa_acervo_vazios_rows();
+        if (trim((string) ($_GET['format'] ?? '')) === 'pdf') {
+            require_once __DIR__ . '/pdf.php';
+            output_mapa_acervo_vazios_pdf($rows);
+        }
+
+        export_xlsx('mapa_acervo_espacos_vazios_' . date('dmY') . '.xlsx', $rows, 'Espacos Vazios');
+    }
+
     if (($_GET['export'] ?? '') === 'pendentes') {
         require_once __DIR__ . '/export.php';
         export_xlsx('temporalidade_pendente.xlsx', temporalidade_pendente(), 'Pendentes');
@@ -291,6 +312,25 @@ function planilha_export_rows(): array
         ORDER BY rowid DESC
     ");
     $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
+function locais_vazios_rows(): array
+{
+    $stmt = db()->prepare("
+        SELECT
+            UNIDADE AS unidade,
+            CAIXA AS caixa,
+            PROCESSO AS n_processo,
+            ASSUNTO AS assunto,
+            INTERESSADO AS interessado,
+            LOCALIZACAO AS localizacao,
+            FONTE_ARQUIVO AS origem
+        FROM acervo
+        WHERE TRIM(COALESCE(LOCALIZACAO, '')) = '' OR LOCALIZACAO = '---'
+        ORDER BY CAIXA, PROCESSO
+    ");
+    $stmt->execute();
     return $stmt->fetchAll();
 }
 
