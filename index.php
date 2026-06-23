@@ -542,6 +542,8 @@ function render_planilha(): void
                 <button class="primary" type="submit"><?= app_icon('send') ?>Filtrar</button>
                 <a class="button" href="/?page=planilha">Limpar</a>
                 <a class="button export-button" href="/?<?= h(http_build_query($exportQuery)) ?>"><?= app_icon('download') ?>Baixar Excel</a>
+                <a class="button export-button" href="/?page=planilha&export=locais_vazios&format=xlsx"><?= app_icon('download') ?>Excel locais vazios</a>
+                <a class="button export-button" href="/?page=planilha&export=locais_vazios&format=pdf"><?= app_icon('download') ?>PDF locais vazios</a>
             </div>
         </form>
 
@@ -1205,6 +1207,8 @@ function render_mapa_acervo(): void
                 <p>Cadastre a capacidade real de cada estrutura e acompanhe onde ainda existe espaco para novas caixas.</p>
             </div>
             <div class="dashboard-actions">
+                <a class="button export-button" href="/?page=mapa_acervo&export=mapa_vazios&format=xlsx"><?= app_icon('download') ?>Excel espacos vazios</a>
+                <a class="button export-button" href="/?page=mapa_acervo&export=mapa_vazios&format=pdf"><?= app_icon('download') ?>PDF espacos vazios</a>
                 <?php if ((int) ($editing['id'] ?? 0) > 0): ?><a class="button" href="/?page=mapa_acervo">Novo cadastro</a><?php endif; ?>
             </div>
         </div>

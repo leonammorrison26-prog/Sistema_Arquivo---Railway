@@ -210,6 +210,116 @@ function output_guia_pdf(array $data): never
     exit;
 }
 
+function output_locais_vazios_pdf(array $rows): never
+{
+    $pdf = new FPDF('P', 'mm', 'A4');
+    $pdf->AddPage();
+    $pdf->SetMargins(10, 10, 10);
+    $pdf->SetAutoPageBreak(true, 10);
+    $pdf->SetFont('Arial', 'B', 14);
+    $pdf->Cell(0, 10, text_pdf('Relatório de locais vazios'), 0, 1, 'C');
+    $pdf->SetFont('Arial', '', 10);
+    $pdf->Ln(4);
+
+    if (!$rows) {
+        $pdf->Cell(0, 8, text_pdf('Nenhum registro encontrado com localizacao vazia.'), 0, 1);
+        $pdf->Output('D', 'locais_vazios_' . date('dmY') . '.pdf');
+        exit;
+    }
+
+    $columns = [
+        ['unidade', 'Unidade'],
+        ['caixa', 'Caixa'],
+        ['n_processo', 'Processo'],
+        ['assunto', 'Assunto'],
+        ['interessado', 'Interessado'],
+        ['localizacao', 'Localizacao'],
+    ];
+    $widths = [28, 18, 34, 46, 38, 26];
+
+    $pdf->SetFont('Arial', 'B', 9);
+    foreach ($columns as $index => [, $label]) {
+        $pdf->Cell($widths[$index], 7, text_pdf($label), 1, 0, 'C');
+    }
+    $pdf->Ln();
+    $pdf->SetFont('Arial', '', 8);
+
+    foreach ($rows as $row) {
+        foreach ($columns as $index => [$key]) {
+            $pdf->Cell($widths[$index], 6, text_pdf((string) ($row[$key] ?? '')), 1, 0);
+        }
+        $pdf->Ln();
+        if ($pdf->GetY() > 270) {
+            $pdf->AddPage();
+            $pdf->SetFont('Arial', 'B', 9);
+            foreach ($columns as $index => [, $label]) {
+                $pdf->Cell($widths[$index], 7, text_pdf($label), 1, 0, 'C');
+            }
+            $pdf->Ln();
+            $pdf->SetFont('Arial', '', 8);
+        }
+    }
+
+    $pdf->Output('D', 'locais_vazios_' . date('dmY') . '.pdf');
+    exit;
+}
+
+function output_mapa_acervo_vazios_pdf(array $rows): never
+{
+    $pdf = new FPDF('L', 'mm', 'A4');
+    $pdf->AddPage();
+    $pdf->SetMargins(10, 10, 10);
+    $pdf->SetAutoPageBreak(true, 10);
+    $pdf->SetFont('Arial', 'B', 15);
+    $pdf->Cell(0, 9, text_pdf('Mapa do Acervo - Espacos vazios'), 0, 1, 'C');
+    $pdf->SetFont('Arial', '', 9);
+    $pdf->Cell(0, 6, text_pdf('Gerado em ' . date('d/m/Y H:i')), 0, 1, 'C');
+    $pdf->Ln(3);
+
+    if (!$rows) {
+        $pdf->SetFont('Arial', '', 11);
+        $pdf->Cell(0, 8, text_pdf('Nenhum espaco vazio cadastrado no mapa do acervo.'), 0, 1);
+        $pdf->Output('D', 'mapa_acervo_espacos_vazios_' . date('dmY') . '.pdf');
+        exit;
+    }
+
+    $columns = [
+        ['Sala', 'Sala', 22],
+        ['Tipo', 'Tipo', 38],
+        ['Numero', 'N.', 18],
+        ['Prateleiras', 'Prat.', 18],
+        ['Caixas por prateleira', 'Cx/prat.', 22],
+        ['Capacidade total', 'Cap.', 20],
+        ['Caixas ocupadas', 'Ocup.', 20],
+        ['Espacos vazios', 'Vazios', 22],
+        ['Observacao', 'Observacao', 95],
+    ];
+
+    $pdf->SetFillColor(226, 232, 240);
+    $pdf->SetFont('Arial', 'B', 8.5);
+    foreach ($columns as [, $label, $width]) {
+        $pdf->Cell($width, 7, text_pdf($label), 1, 0, 'C', true);
+    }
+    $pdf->Ln();
+
+    $pdf->SetFont('Arial', '', 8);
+    $totalVazios = 0;
+    foreach ($rows as $row) {
+        $totalVazios += (int) ($row['Espacos vazios'] ?? 0);
+        foreach ($columns as [$key, , $width]) {
+            $align = in_array($key, ['Prateleiras', 'Caixas por prateleira', 'Capacidade total', 'Caixas ocupadas', 'Espacos vazios'], true) ? 'C' : 'L';
+            $pdf->Cell($width, 6, text_pdf((string) ($row[$key] ?? '')), 1, 0, $align);
+        }
+        $pdf->Ln();
+    }
+
+    $pdf->Ln(4);
+    $pdf->SetFont('Arial', 'B', 10);
+    $pdf->Cell(0, 7, text_pdf('Total de espacos vazios: ' . $totalVazios), 0, 1, 'R');
+    $pdf->Output('D', 'mapa_acervo_espacos_vazios_' . date('dmY') . '.pdf');
+    exit;
+}
+
 function guia_field_line(FPDF $pdf, string $label, string $value, float $x, float $y, float $labelW, float $lineW, float $minLineW = 40, bool $centerValue = true): void
 {
     $pdf->SetFont('Arial', '', 13.5);

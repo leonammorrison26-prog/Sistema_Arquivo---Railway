@@ -731,6 +731,33 @@ function mapa_acervo_tipo_label(string $tipo): string
     return $tipo === 'estante' ? 'Estante' : 'Modulo deslizante';
 }
 
+function mapa_acervo_vazios_rows(): array
+{
+    $rows = [];
+    foreach (mapa_acervo_posicoes() as $row) {
+        $capacidadeTotal = mapa_acervo_capacidade_total($row);
+        $ocupadas = max(0, (int) ($row['caixas_ocupadas'] ?? 0));
+        $livres = max(0, $capacidadeTotal - $ocupadas);
+        if ($livres <= 0) {
+            continue;
+        }
+
+        $rows[] = [
+            'Sala' => (string) ($row['sala'] ?? ''),
+            'Tipo' => mapa_acervo_tipo_label((string) ($row['tipo'] ?? '')),
+            'Numero' => (string) ($row['numero'] ?? ''),
+            'Prateleiras' => (int) ($row['prateleiras'] ?? 0),
+            'Caixas por prateleira' => (int) ($row['capacidade_por_prateleira'] ?? 0),
+            'Capacidade total' => $capacidadeTotal,
+            'Caixas ocupadas' => $ocupadas,
+            'Espacos vazios' => $livres,
+            'Observacao' => (string) ($row['observacao'] ?? ''),
+        ];
+    }
+
+    return $rows;
+}
+
 function diagnostic_snapshot(): array
 {
     $files = function_exists('planilha_import_files') ? planilha_import_files() : [];
