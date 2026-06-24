@@ -183,8 +183,38 @@ function handle_actions(): void
             redirect_to('mapa_acervo');
         }
 
+        if ($action === 'save_mapa_caixa_cor') {
+            save_mapa_caixa_cor();
+            if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest') {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            redirect_to('mapa_acervo');
+        }
+
+        if ($action === 'save_mapa_setor_cor') {
+            save_mapa_setor_cor();
+            if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest') {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            redirect_to('mapa_acervo');
+        }
+
         if ($action === 'delete_mapa_posicao') {
             delete_mapa_posicao();
+            redirect_to('mapa_acervo');
+        }
+
+        if ($action === 'save_mapa_setor') {
+            save_mapa_setor();
+            redirect_to('mapa_acervo');
+        }
+
+        if ($action === 'delete_mapa_setor') {
+            delete_mapa_setor();
             redirect_to('mapa_acervo');
         }
     } catch (Throwable $e) {
@@ -566,6 +596,7 @@ function save_mapa_posicao(): void
     $capacidade = max(1, (int) ($_POST['capacidade_por_prateleira'] ?? 1));
     $caixas = max(0, (int) ($_POST['caixas_ocupadas'] ?? 0));
     $prateleirasInput = is_array($_POST['prateleiras_ocupacao'] ?? null) ? $_POST['prateleiras_ocupacao'] : [];
+    $coresInput = is_array($_POST['caixas_cores'] ?? null) ? $_POST['caixas_cores'] : [];
     $corSetor = trim((string) ($_POST['cor_setor'] ?? '#0ea5e9'));
     $observacao = trim((string) ($_POST['observacao'] ?? ''));
 
@@ -584,6 +615,7 @@ function save_mapa_posicao(): void
 
     $total = $prateleiras * $capacidade;
     $ocupacaoPrateleiras = [];
+    $caixasCores = [];
     $somaPrateleiras = 0;
     for ($i = 1; $i <= $prateleiras; $i++) {
         $value = max(0, (int) ($prateleirasInput[$i - 1] ?? 0));
@@ -591,6 +623,11 @@ function save_mapa_posicao(): void
             throw new RuntimeException('A P' . $i . ' nao pode passar de ' . $capacidade . ' caixas.');
         }
         $ocupacaoPrateleiras[] = $value;
+        $caixasCores[$i - 1] = [];
+        for ($box = 0; $box < $capacidade; $box++) {
+            $color = strtolower(trim((string) ($coresInput[$i - 1][$box] ?? '')));
+            $caixasCores[$i - 1][$box] = preg_match('/^#[0-9a-f]{6}$/', $color) ? $color : '';
+        }
         $somaPrateleiras += $value;
     }
 
@@ -611,6 +648,7 @@ function save_mapa_posicao(): void
         ':capacidade_por_prateleira' => $capacidade,
         ':caixas_ocupadas' => $caixas,
         ':prateleiras_ocupacao' => json_encode($ocupacaoPrateleiras, JSON_UNESCAPED_UNICODE),
+        ':caixas_cores' => json_encode($caixasCores, JSON_UNESCAPED_UNICODE),
         ':cor_setor' => strtolower($corSetor),
         ':observacao' => $observacao,
         ':atualizado_em' => date('Y-m-d H:i:s'),
@@ -628,6 +666,7 @@ function save_mapa_posicao(): void
                 capacidade_por_prateleira = :capacidade_por_prateleira,
                 caixas_ocupadas = :caixas_ocupadas,
                 prateleiras_ocupacao = :prateleiras_ocupacao,
+                caixas_cores = :caixas_cores,
                 cor_setor = :cor_setor,
                 observacao = :observacao,
                 atualizado_em = :atualizado_em
@@ -640,9 +679,9 @@ function save_mapa_posicao(): void
 
     db()->prepare("
         INSERT INTO acervo_mapa_posicoes
-            (sala, tipo, numero, numero_estante, prateleiras, capacidade_por_prateleira, caixas_ocupadas, prateleiras_ocupacao, cor_setor, observacao, criado_em, atualizado_em)
+            (sala, tipo, numero, numero_estante, prateleiras, capacidade_por_prateleira, caixas_ocupadas, prateleiras_ocupacao, caixas_cores, cor_setor, observacao, criado_em, atualizado_em)
         VALUES
-            (:sala, :tipo, :numero, :numero_estante, :prateleiras, :capacidade_por_prateleira, :caixas_ocupadas, :prateleiras_ocupacao, :cor_setor, :observacao, :atualizado_em, :atualizado_em)
+            (:sala, :tipo, :numero, :numero_estante, :prateleiras, :capacidade_por_prateleira, :caixas_ocupadas, :prateleiras_ocupacao, :caixas_cores, :cor_setor, :observacao, :atualizado_em, :atualizado_em)
     ")->execute($params);
     $_SESSION['flash_success'] = 'Posicao adicionada ao mapa.';
     system_event('mapa_acervo_criado', 'Posicao fisica criada', ['sala' => $sala, 'numero' => $numero]);
@@ -658,6 +697,121 @@ function delete_mapa_posicao(): void
     db()->prepare('DELETE FROM acervo_mapa_posicoes WHERE id = :id')->execute([':id' => $id]);
     $_SESSION['flash_success'] = 'Posicao removida do mapa.';
     system_event('mapa_acervo_excluido', 'Posicao fisica excluida', ['id' => $id]);
+}
+
+function save_mapa_caixa_cor(): void
+{
+    $id = max(0, (int) ($_POST['id'] ?? 0));
+    $shelf = max(0, (int) ($_POST['shelf'] ?? 0));
+    $box = max(0, (int) ($_POST['box'] ?? 0));
+    $color = strtolower(trim((string) ($_POST['color'] ?? '')));
+
+    if ($id <= 0) {
+        throw new RuntimeException('Caixa invalida para colorir.');
+    }
+    if (!preg_match('/^#[0-9a-f]{6}$/', $color)) {
+        throw new RuntimeException('Cor invalida.');
+    }
+
+    $stmt = db()->prepare('SELECT * FROM acervo_mapa_posicoes WHERE id = :id');
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+    if (!$row) {
+        throw new RuntimeException('Posicao do mapa nao encontrada.');
+    }
+
+    $prateleiras = max(1, (int) ($row['prateleiras'] ?? 1));
+    $capacidade = max(1, (int) ($row['capacidade_por_prateleira'] ?? 1));
+    if ($shelf >= $prateleiras || $box >= $capacidade) {
+        throw new RuntimeException('Caixa fora da capacidade cadastrada.');
+    }
+
+    $cores = mapa_acervo_caixas_cores($row);
+    $cores[$shelf][$box] = $color;
+
+    db()->prepare('
+        UPDATE acervo_mapa_posicoes
+           SET caixas_cores = :caixas_cores,
+               atualizado_em = :atualizado_em
+         WHERE id = :id
+    ')->execute([
+        ':caixas_cores' => json_encode($cores, JSON_UNESCAPED_UNICODE),
+        ':atualizado_em' => date('Y-m-d H:i:s'),
+        ':id' => $id,
+    ]);
+}
+
+function save_mapa_setor_cor(): void
+{
+    $id = max(0, (int) ($_POST['id'] ?? 0));
+    $color = strtolower(trim((string) ($_POST['color'] ?? '')));
+
+    if ($id <= 0) {
+        throw new RuntimeException('Estrutura invalida para colorir.');
+    }
+    if (!preg_match('/^#[0-9a-f]{6}$/', $color)) {
+        throw new RuntimeException('Cor invalida.');
+    }
+
+    $stmt = db()->prepare('SELECT id FROM acervo_mapa_posicoes WHERE id = :id');
+    $stmt->execute([':id' => $id]);
+    if (!$stmt->fetchColumn()) {
+        throw new RuntimeException('Posicao do mapa nao encontrada.');
+    }
+
+    db()->prepare('
+        UPDATE acervo_mapa_posicoes
+           SET cor_setor = :cor_setor,
+               caixas_cores = :caixas_cores,
+               atualizado_em = :atualizado_em
+         WHERE id = :id
+    ')->execute([
+        ':cor_setor' => $color,
+        ':caixas_cores' => '[]',
+        ':atualizado_em' => date('Y-m-d H:i:s'),
+        ':id' => $id,
+    ]);
+}
+
+function save_mapa_setor(): void
+{
+    $nome = trim((string) ($_POST['nome'] ?? ''));
+    $cor = strtolower(trim((string) ($_POST['cor'] ?? '')));
+
+    if ($nome === '') {
+        throw new RuntimeException('Informe o nome do setor.');
+    }
+    if (!preg_match('/^#[0-9a-f]{6}$/', $cor)) {
+        throw new RuntimeException('Informe uma cor valida para o setor.');
+    }
+
+    $stmt = db()->prepare('SELECT COUNT(*) FROM acervo_mapa_setores WHERE lower(cor) = lower(:cor)');
+    $stmt->execute([':cor' => $cor]);
+    if ((int) $stmt->fetchColumn() > 0) {
+        throw new RuntimeException('Essa cor ja esta cadastrada em outro setor.');
+    }
+
+    db()->prepare('
+        INSERT INTO acervo_mapa_setores (nome, cor, criado_em)
+        VALUES (:nome, :cor, :criado_em)
+    ')->execute([
+        ':nome' => $nome,
+        ':cor' => $cor,
+        ':criado_em' => date('Y-m-d H:i:s'),
+    ]);
+
+    $_SESSION['flash_success'] = 'Setor cadastrado na paleta.';
+}
+
+function delete_mapa_setor(): void
+{
+    $id = max(0, (int) ($_POST['id'] ?? 0));
+    if ($id <= 0) {
+        throw new RuntimeException('Setor nao encontrado.');
+    }
+
+    db()->prepare('DELETE FROM acervo_mapa_setores WHERE id = :id')->execute([':id' => $id]);
+    $_SESSION['flash_success'] = 'Setor removido da paleta.';
 }
 
 function save_user(): void

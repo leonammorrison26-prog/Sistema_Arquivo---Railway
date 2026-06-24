@@ -198,7 +198,39 @@ document.querySelectorAll('.mapa-color-field input[type="color"]').forEach((inpu
     syncColor();
 });
 
+document.querySelectorAll('[data-mapa-setor-form]').forEach((form) => {
+    const input = form.querySelector('[data-mapa-setor-color]');
+    const output = form.querySelector('[data-mapa-setor-color-text]');
+    const sync = () => {
+        if (output && input) output.textContent = input.value.toUpperCase();
+    };
+    input?.addEventListener('input', sync);
+    form.querySelectorAll('[data-mapa-free-color]').forEach((button) => {
+        button.addEventListener('click', () => {
+            if (!input) return;
+            input.value = button.dataset.mapaFreeColor || input.value;
+            sync();
+        });
+    });
+    sync();
+});
+
+document.querySelectorAll('[data-mapa-use-sector-color]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const target = document.querySelector('.mapa-color-field input[name="cor_setor"]');
+        if (!target) return;
+        target.value = button.dataset.mapaUseSectorColor || target.value;
+        target.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+});
+
 document.querySelectorAll('[data-mapa-form]').forEach((form) => {
+    const typeInput = form.querySelector('[data-mapa-tipo]');
+    const numberLabel = form.querySelector('[data-mapa-numero-label]');
+    const numberInput = form.querySelector('[data-mapa-numero-input]');
+    const looseShelfField = form.querySelector('[data-mapa-estante-field]');
+    const looseShelfInput = looseShelfField?.querySelector('input');
+    const sectorColorInput = form.querySelector('input[name="cor_setor"]');
     const shelfEditor = form.querySelector('[data-mapa-shelf-editor]');
     const shelfGrid = form.querySelector('[data-mapa-shelf-grid]');
     const shelvesInput = form.querySelector('[data-mapa-prateleiras]');
@@ -206,16 +238,39 @@ document.querySelectorAll('[data-mapa-form]').forEach((form) => {
     const totalInput = form.querySelector('[data-mapa-total]');
     if (!shelfEditor || !shelfGrid || !shelvesInput || !capacityInput || !totalInput) return;
 
+    function syncStructureType() {
+        const isLooseShelf = typeInput?.value === 'estante';
+        if (numberLabel) numberLabel.textContent = isLooseShelf ? 'N. de Estante' : 'N. do Modulo';
+        if (numberInput) numberInput.placeholder = isLooseShelf ? 'Ex: 01' : 'Ex: 01';
+        if (looseShelfField) looseShelfField.hidden = isLooseShelf;
+        if (looseShelfInput) looseShelfInput.disabled = isLooseShelf;
+    }
+
     let values = [];
+    let boxColors = [];
     try {
         values = JSON.parse(shelfEditor.dataset.values || '[]');
     } catch (_error) {
         values = [];
     }
+    try {
+        boxColors = JSON.parse(shelfEditor.dataset.colors || '[]');
+    } catch (_error) {
+        boxColors = [];
+    }
 
     function currentShelfValues() {
         const inputs = Array.from(shelfGrid.querySelectorAll('input[name="prateleiras_ocupacao[]"]'));
         return inputs.map((input) => Math.max(0, Number.parseInt(input.value || '0', 10) || 0));
+    }
+
+    function currentBoxColors() {
+        const rows = [];
+        shelfGrid.querySelectorAll('[data-mapa-box-row]').forEach((row) => {
+            const index = Number.parseInt(row.dataset.mapaBoxRow || '0', 10) || 0;
+            rows[index] = Array.from(row.querySelectorAll('input[type="hidden"]')).map((input) => input.value || '');
+        });
+        return rows;
     }
 
     function syncTotal() {
@@ -234,12 +289,44 @@ document.querySelectorAll('[data-mapa-form]').forEach((form) => {
         let value = Math.max(0, Number.parseInt(input.value || '0', 10) || 0);
         if (value > capacity) value = capacity;
         input.value = value > 0 ? value.toString() : '';
+        renderBoxColorRows();
         syncTotal();
+    }
+
+    function renderBoxColorRows() {
+        const existingColors = currentBoxColors();
+        if (existingColors.some((row) => row?.some((color) => color))) boxColors = existingColors;
+        const defaultColor = sectorColorInput?.value || '#0ea5e9';
+        shelfGrid.querySelectorAll('.mapa-shelf-field').forEach((label, index) => {
+            const input = label.querySelector('input[name="prateleiras_ocupacao[]"]');
+            const row = label.querySelector('[data-mapa-box-row]');
+            if (!input || !row) return;
+            const capacity = Math.max(1, Number.parseInt(capacityInput.value || '1', 10) || 1);
+            const count = Math.min(capacity, Math.max(0, Number.parseInt(input.value || '0', 10) || 0));
+            row.innerHTML = '';
+            for (let box = 0; box < count; box += 1) {
+                const savedColor = (boxColors[index]?.[box] || '').toLowerCase();
+                const field = document.createElement('span');
+                field.className = 'mapa-box-color-field';
+                field.title = `Cor da caixa ${box + 1} na P${index + 1}`;
+                field.innerHTML = `<input type="hidden" name="caixas_cores[${index}][${box}]" value="${savedColor}"><input type="color" value="${savedColor || defaultColor}" aria-label="Cor da caixa ${box + 1} na P${index + 1}">`;
+                const hidden = field.querySelector('input[type="hidden"]');
+                const picker = field.querySelector('input[type="color"]');
+                picker.addEventListener('input', () => {
+                    hidden.value = picker.value.toLowerCase();
+                    field.classList.add('is-custom');
+                });
+                if (savedColor) field.classList.add('is-custom');
+                row.appendChild(field);
+            }
+        });
     }
 
     function renderShelves() {
         const previous = currentShelfValues();
         if (previous.length) values = previous;
+        const previousColors = currentBoxColors();
+        if (previousColors.length) boxColors = previousColors;
         const shelves = Math.max(1, Number.parseInt(shelvesInput.value || '1', 10) || 1);
         const capacity = Math.max(1, Number.parseInt(capacityInput.value || '1', 10) || 1);
         shelfGrid.innerHTML = '';
@@ -248,20 +335,161 @@ document.querySelectorAll('[data-mapa-form]').forEach((form) => {
             const label = document.createElement('label');
             label.className = 'mapa-shelf-field';
             const value = Math.min(capacity, Math.max(0, Number.parseInt(values[index] || '0', 10) || 0));
-            label.innerHTML = `<span>P${index + 1}</span><input name="prateleiras_ocupacao[]" type="number" inputmode="numeric" min="0" max="${capacity}" placeholder="0" value="${value > 0 ? value : ''}" aria-label="Caixas na P${index + 1}">`;
+            label.innerHTML = `<span>P${index + 1}</span><input name="prateleiras_ocupacao[]" type="number" inputmode="numeric" min="0" max="${capacity}" placeholder="0" value="${value > 0 ? value : ''}" aria-label="Caixas na P${index + 1}"><div class="mapa-box-color-row" data-mapa-box-row="${index}" aria-label="Cores das caixas da P${index + 1}"></div>`;
             shelfGrid.appendChild(label);
         }
 
-        shelfGrid.querySelectorAll('input').forEach((input) => {
-            input.addEventListener('input', syncTotal);
+        shelfGrid.querySelectorAll('input[name="prateleiras_ocupacao[]"]').forEach((input) => {
+            input.addEventListener('input', () => {
+                renderBoxColorRows();
+                syncTotal();
+            });
             input.addEventListener('blur', () => normalizeShelfInput(input));
         });
+        renderBoxColorRows();
         syncTotal();
     }
 
     shelvesInput.addEventListener('input', renderShelves);
     capacityInput.addEventListener('input', renderShelves);
+    sectorColorInput?.addEventListener('input', () => {
+        shelfGrid.querySelectorAll('.mapa-box-color-field:not(.is-custom) input[type="color"]').forEach((input) => {
+            input.value = sectorColorInput.value;
+        });
+    });
+    typeInput?.addEventListener('change', syncStructureType);
+    syncStructureType();
     renderShelves();
+});
+
+document.querySelectorAll('[data-mapa-sala-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const sala = button.closest('.mapa-sala');
+        const menu = sala?.querySelector('[data-mapa-modulo-menu]');
+        const details = sala?.querySelector('[data-mapa-sala-details]');
+        if (!menu || !details) return;
+        const open = menu.hidden;
+        menu.hidden = !open;
+        details.hidden = true;
+        sala.querySelectorAll('[data-mapa-modulo-button]').forEach((moduleButton) => {
+            moduleButton.classList.remove('active');
+        });
+        sala.querySelectorAll('[data-mapa-modulo-card]').forEach((card) => {
+            card.hidden = true;
+        });
+        button.setAttribute('aria-expanded', open ? 'true' : 'false');
+        button.classList.toggle('active', open);
+    });
+});
+
+document.querySelectorAll('[data-mapa-modulo-button]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const sala = button.closest('.mapa-sala');
+        const details = sala?.querySelector('[data-mapa-sala-details]');
+        const key = button.dataset.mapaModuloButton || '';
+        if (!details || !key) return;
+        sala.querySelectorAll('[data-mapa-modulo-button]').forEach((moduleButton) => {
+            moduleButton.classList.toggle('active', moduleButton === button);
+        });
+        let visible = 0;
+        sala.querySelectorAll('[data-mapa-modulo-card]').forEach((card) => {
+            const match = card.dataset.mapaModuloCard === key;
+            card.hidden = !match;
+            if (match) visible += 1;
+        });
+        details.hidden = visible === 0;
+    });
+});
+
+document.querySelectorAll('[data-mapa-planta-button]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const sala = button.closest('.mapa-sala');
+        const key = button.dataset.mapaPlantaButton || '';
+        const menu = sala?.querySelector('[data-mapa-modulo-menu]');
+        const salaToggle = sala?.querySelector('[data-mapa-sala-toggle]');
+        const moduleButton = Array.from(sala?.querySelectorAll('[data-mapa-modulo-button]') || [])
+            .find((item) => item.dataset.mapaModuloButton === key);
+        if (!menu || !salaToggle || !moduleButton) return;
+        menu.hidden = false;
+        salaToggle.classList.add('active');
+        salaToggle.setAttribute('aria-expanded', 'true');
+        moduleButton.click();
+    });
+});
+
+document.querySelectorAll('[data-mapa-card-box-color]').forEach((input) => {
+    input.addEventListener('input', async () => {
+        const picker = input.closest('.mapa-caixa-color-picker');
+        const body = new FormData();
+        body.append('action', 'save_mapa_caixa_cor');
+        body.append('return_page', 'mapa_acervo');
+        body.append('id', input.dataset.id || '');
+        body.append('shelf', input.dataset.shelf || '0');
+        body.append('box', input.dataset.box || '0');
+        body.append('color', input.value);
+        picker?.style.setProperty('--box-color', input.value);
+        picker?.classList.add('is-saving');
+
+        try {
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body
+            });
+            if (!response.ok) throw new Error('Falha ao salvar cor');
+            picker?.classList.remove('is-error');
+        } catch (_error) {
+            picker?.classList.add('is-error');
+        } finally {
+            picker?.classList.remove('is-saving');
+        }
+    });
+});
+
+document.querySelectorAll('[data-mapa-sector-color]').forEach((input) => {
+    const picker = input.closest('.mapa-sector-picker');
+    const applyButton = input.closest('strong')?.querySelector('[data-mapa-apply-sector-color]');
+
+    input.addEventListener('input', () => {
+        if (applyButton) applyButton.hidden = input.value === picker?.dataset.previousColor;
+        picker?.classList.remove('is-error');
+    });
+
+    applyButton?.addEventListener('click', async () => {
+        const card = input.closest('.mapa-estrutura');
+        const color = input.value;
+        const body = new FormData();
+        body.append('action', 'save_mapa_setor_cor');
+        body.append('return_page', 'mapa_acervo');
+        body.append('id', input.dataset.id || '');
+        body.append('color', color);
+
+        picker?.classList.add('is-saving');
+        applyButton.disabled = true;
+
+        try {
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body
+            });
+            if (!response.ok) throw new Error('Falha ao salvar cor');
+            card?.style.setProperty('--sector', color);
+            card?.querySelectorAll('.mapa-caixa-color-picker').forEach((boxPicker) => {
+                boxPicker.style.removeProperty('--box-color');
+                boxPicker.querySelector('input[type="color"]').value = color;
+            });
+            picker?.classList.remove('is-error');
+            if (picker) picker.dataset.previousColor = color;
+            applyButton.hidden = true;
+        } catch (_error) {
+            picker?.classList.add('is-error');
+        } finally {
+            picker?.classList.remove('is-saving');
+            applyButton.disabled = false;
+        }
+    });
+    picker?.setAttribute('data-previous-color', input.value);
 });
 
 const indicadorForm = document.querySelector('[data-indicador-form]');

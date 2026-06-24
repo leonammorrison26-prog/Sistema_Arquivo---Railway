@@ -1201,6 +1201,9 @@ function render_mapa_acervo(): void
         'observacao' => '',
     ];
     $editingOcupacao = mapa_acervo_prateleiras_ocupacao($editing);
+    $editingCaixasCores = mapa_acervo_caixas_cores($editing);
+    $setoresMapa = mapa_acervo_setores();
+    $coresLivresMapa = mapa_acervo_cores_livres($setoresMapa);
     ?>
     <section class="mapa-acervo-page">
         <div class="dashboard-hero mapa-hero">
@@ -1243,16 +1246,16 @@ function render_mapa_acervo(): void
                         <input name="sala" value="<?= h($editing['sala'] ?? '') ?>" placeholder="Ex: 3.24" required>
                     </label>
                     <label>Tipo
-                        <select name="tipo">
+                        <select name="tipo" data-mapa-tipo>
                             <option value="modulo_deslizante" <?= (($editing['tipo'] ?? '') === 'modulo_deslizante') ? 'selected' : '' ?>>Modulo deslizante</option>
                             <option value="estante" <?= (($editing['tipo'] ?? '') === 'estante') ? 'selected' : '' ?>>Estante</option>
                         </select>
                     </label>
-                    <label class="mapa-number-field">N. do Modulo
-                        <input name="numero" value="<?= h($editing['numero'] ?? '') ?>" placeholder="Ex: 01" required>
+                    <label class="mapa-number-field" data-mapa-numero-field><span data-mapa-numero-label><?= (($editing['tipo'] ?? '') === 'estante') ? 'N. de Estante' : 'N. do Modulo' ?></span>
+                        <input name="numero" value="<?= h($editing['numero'] ?? '') ?>" placeholder="<?= (($editing['tipo'] ?? '') === 'estante') ? 'Ex: 01' : 'Ex: 01' ?>" required data-mapa-numero-input>
                     </label>
-                    <label class="mapa-number-field">N. da Estante
-                        <input name="numero_estante" value="<?= h($editing['numero_estante'] ?? '') ?>" placeholder="Ex: E01">
+                    <label class="mapa-number-field" data-mapa-estante-field <?= (($editing['tipo'] ?? '') === 'estante') ? 'hidden' : '' ?>>N. da Estante
+                        <input name="numero_estante" value="<?= h($editing['numero_estante'] ?? '') ?>" placeholder="Ex: E01" <?= (($editing['tipo'] ?? '') === 'estante') ? 'disabled' : '' ?>>
                     </label>
                     <label>Prateleiras
                         <input name="prateleiras" type="number" min="1" value="<?= h((string) ($editing['prateleiras'] ?? 10)) ?>" required data-mapa-prateleiras>
@@ -1269,10 +1272,10 @@ function render_mapa_acervo(): void
                             <b><?= h((string) ($editing['cor_setor'] ?? '#0ea5e9')) ?></b>
                         </span>
                     </label>
-                    <div class="wide mapa-shelf-editor" data-mapa-shelf-editor data-values="<?= h(json_encode($editingOcupacao, JSON_UNESCAPED_UNICODE)) ?>">
+                    <div class="wide mapa-shelf-editor" data-mapa-shelf-editor data-values="<?= h(json_encode($editingOcupacao, JSON_UNESCAPED_UNICODE)) ?>" data-colors="<?= h(json_encode($editingCaixasCores, JSON_UNESCAPED_UNICODE)) ?>">
                         <div>
                             <span>Ocupacao por prateleira</span>
-                            <small>Informe quantas caixas existem em cada P. O total sera calculado automaticamente.</small>
+                            <small>Informe a quantidade e clique em cada quadradinho para mudar a cor daquela caixa.</small>
                         </div>
                         <div class="mapa-shelf-grid" data-mapa-shelf-grid></div>
                     </div>
@@ -1286,12 +1289,58 @@ function render_mapa_acervo(): void
                 </div>
             </form>
 
-            <section class="panel mapa-help">
-                <span class="eyebrow">Como usar</span>
-                <h3>Exemplo do seu caso</h3>
-                <p>Sala <strong>3.24</strong>, modulo deslizante numero <strong>1</strong>, com <strong>10</strong> prateleiras e <strong>7</strong> caixas por prateleira gera capacidade de <strong>70 caixas</strong>.</p>
-                <p>Depois informe quantas caixas ja estao ocupando esse modulo. O mapa calcula automaticamente os espacos vazios.</p>
-            </section>
+            <div class="mapa-side-stack">
+                <section class="panel mapa-help">
+                    <span class="eyebrow">Como usar</span>
+                    <h3>Exemplo do seu caso</h3>
+                    <p>Sala <strong>3.24</strong>, modulo <strong>1</strong>, com <strong>10</strong> prateleiras e <strong>7</strong> caixas por P gera <strong>70 caixas</strong>.</p>
+                    <p>Depois informe a ocupacao por prateleira. O mapa calcula os espacos vazios.</p>
+                </section>
+
+                <section class="panel mapa-setores-card">
+                    <span class="eyebrow">Setores</span>
+                    <h3>Paleta do acervo</h3>
+                    <form method="post" class="mapa-setor-form" data-mapa-setor-form>
+                        <input type="hidden" name="action" value="save_mapa_setor">
+                        <input type="hidden" name="return_page" value="mapa_acervo">
+                        <label>Setor
+                            <input name="nome" placeholder="Ex: Financeiro" required>
+                        </label>
+                        <label>Cor
+                            <span>
+                                <input name="cor" type="color" value="<?= h($coresLivresMapa[0] ?? '#0ea5e9') ?>" data-mapa-setor-color>
+                                <b data-mapa-setor-color-text><?= h(strtoupper($coresLivresMapa[0] ?? '#0ea5e9')) ?></b>
+                            </span>
+                        </label>
+                        <?php if ($coresLivresMapa): ?>
+                            <div class="mapa-free-colors" aria-label="Cores livres">
+                                <?php foreach ($coresLivresMapa as $corLivre): ?>
+                                    <button type="button" style="--sector-free: <?= h($corLivre) ?>" data-mapa-free-color="<?= h($corLivre) ?>" title="<?= h(strtoupper($corLivre)) ?>"></button>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php else: ?>
+                            <p class="mapa-setor-note">Todas as cores sugeridas ja foram cadastradas. Delete um setor para liberar a cor.</p>
+                        <?php endif; ?>
+                        <button class="primary" type="submit">Cadastrar setor</button>
+                    </form>
+
+                    <?php if ($setoresMapa): ?>
+                        <div class="mapa-setores-list">
+                            <?php foreach ($setoresMapa as $setor): ?>
+                                <form method="post" class="mapa-setor-row">
+                                    <input type="hidden" name="action" value="delete_mapa_setor">
+                                    <input type="hidden" name="return_page" value="mapa_acervo">
+                                    <input type="hidden" name="id" value="<?= h((string) ($setor['id'] ?? 0)) ?>">
+                                    <button type="button" class="mapa-setor-use" style="--sector-row: <?= h((string) $setor['cor']) ?>" data-mapa-use-sector-color="<?= h((string) $setor['cor']) ?>"></button>
+                                    <strong><?= h((string) $setor['nome']) ?></strong>
+                                    <span><?= h(strtoupper((string) $setor['cor'])) ?></span>
+                                    <button type="submit">Excluir</button>
+                                </form>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </section>
+            </div>
         </section>
 
         <?php if (!$rows): ?>
@@ -1303,19 +1352,29 @@ function render_mapa_acervo(): void
                     $capacidadeSala = array_sum(array_map('mapa_acervo_capacidade_total', $items));
                     $ocupadasSala = array_sum(array_map(fn ($item) => (int) $item['caixas_ocupadas'], $items));
                     $livresSala = max(0, $capacidadeSala - $ocupadasSala);
+                    $modulosSala = mapa_acervo_modulos_resumo($items);
                     ?>
                     <section class="mapa-sala">
                         <div class="mapa-sala-head">
                             <div>
                                 <span class="eyebrow">Sala</span>
-                                <h3><?= h($sala) ?></h3>
+                                <button class="mapa-sala-toggle" type="button" data-mapa-sala-toggle aria-expanded="false"><?= h($sala) ?></button>
                             </div>
                             <strong><?= h((string) $livresSala) ?> espacos vazios</strong>
                             <span><?= h((string) $ocupadasSala) ?>/<?= h((string) $capacidadeSala) ?> caixas</span>
                         </div>
                         <?php render_mapa_planta_sala((string) $sala, $items); ?>
-                        <div class="mapa-estrutura-grid">
-                            <?php foreach ($items as $item): render_mapa_estrutura($item); endforeach; ?>
+                        <div class="mapa-modulo-menu" data-mapa-modulo-menu hidden>
+                            <?php foreach ($modulosSala as $modulo): ?>
+                                <button type="button" data-mapa-modulo-button="<?= h($modulo['key']) ?>">
+                                    <span><?= h($modulo['tipo']) ?></span>
+                                    <strong><?= h($modulo['label']) ?></strong>
+                                    <em><?= h((string) $modulo['total']) ?> estrutura(s)</em>
+                                </button>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="mapa-estrutura-grid" data-mapa-sala-details hidden>
+                            <?php foreach ($modulosSala as $modulo): render_mapa_modulo_grupo($modulo); endforeach; ?>
                         </div>
                     </section>
                 <?php endforeach; ?>
@@ -1392,33 +1451,35 @@ function render_mapa_acervo_inteligencia(array $rows, array $resumo): void
 
 function render_mapa_planta_sala(string $sala, array $items): void
 {
-    $maxCapacidade = max(array_map('mapa_acervo_capacidade_total', $items) ?: [1]);
+    $modulos = mapa_acervo_modulos_resumo($items);
     ?>
-    <div class="mapa-planta" aria-label="Planta visual da sala <?= h($sala) ?>">
+    <div class="mapa-planta" aria-label="Painel visual da sala <?= h($sala) ?>">
         <div class="mapa-planta-corredor">
             <span>Entrada</span>
             <i></i>
             <span>Corredor de consulta</span>
         </div>
         <div class="mapa-planta-grid">
-            <?php foreach ($items as $item): ?>
+            <?php foreach ($modulos as $modulo): ?>
                 <?php
-                $total = mapa_acervo_capacidade_total($item);
-                $ocupadas = max(0, (int) ($item['caixas_ocupadas'] ?? 0));
+                $total = array_sum(array_map('mapa_acervo_capacidade_total', $modulo['items']));
+                $ocupadas = array_sum(array_map(fn ($item) => max(0, (int) ($item['caixas_ocupadas'] ?? 0)), $modulo['items']));
                 $livres = max(0, $total - $ocupadas);
                 $percent = $total > 0 ? min(100, (int) round(($ocupadas / $total) * 100)) : 0;
                 $status = $percent >= 95 ? 'is-full' : ($percent >= 75 ? 'is-alert' : 'is-open');
-                $span = min(3, max(1, (int) ceil(($total / max(1, $maxCapacidade)) * 3)));
-                $corSetor = mapa_acervo_cor_setor($item);
+                $corSetor = mapa_acervo_cor_setor($modulo['items'][0] ?? []);
                 ?>
-                <a class="mapa-planta-bloco <?= h($status) ?> <?= h((string) ($item['tipo'] ?? '')) ?>"
-                   style="--fill: <?= h((string) $percent) ?>%; --span: <?= h((string) $span) ?>; --sector: <?= h($corSetor) ?>"
-                   href="/?page=mapa_acervo&edit_mapa=<?= h((string) ($item['id'] ?? 0)) ?>"
-                   title="<?= h(mapa_acervo_tipo_label((string) ($item['tipo'] ?? '')) . ' ' . (string) ($item['numero'] ?? '') . ': ' . $ocupadas . '/' . $total . ' caixas') ?>">
-                    <span><?= h(mapa_acervo_tipo_label((string) ($item['tipo'] ?? ''))) ?></span>
-                    <strong>N. <?= h((string) ($item['numero'] ?? '')) ?></strong>
-                    <em><?= h((string) $livres) ?> livres</em>
-                </a>
+                <button class="mapa-planta-bloco <?= h($status) ?>"
+                   type="button"
+                   style="--fill: <?= h((string) $percent) ?>%; --sector: <?= h($corSetor) ?>"
+                   data-mapa-planta-button="<?= h((string) $modulo['key']) ?>"
+                   title="<?= h((string) $modulo['label'] . ': ' . $ocupadas . '/' . $total . ' caixas') ?>">
+                    <span><?= h((string) $modulo['tipo']) ?></span>
+                    <strong><?= h((string) $modulo['label']) ?></strong>
+                    <em><?= h((string) $modulo['total']) ?> estrutura(s)</em>
+                    <small><b></b></small>
+                    <i><?= h((string) $percent) ?>% ocupado · <?= h((string) $livres) ?> livres</i>
+                </button>
             <?php endforeach; ?>
         </div>
         <div class="mapa-planta-legenda">
@@ -1430,7 +1491,98 @@ function render_mapa_planta_sala(string $sala, array $items): void
     <?php
 }
 
-function render_mapa_estrutura(array $item): void
+function mapa_acervo_modulos_resumo(array $items): array
+{
+    $modulos = [];
+    foreach ($items as $item) {
+        $key = mapa_acervo_modulo_key($item);
+        if (!isset($modulos[$key])) {
+            $isModulo = (($item['tipo'] ?? '') === 'modulo_deslizante');
+            $numero = trim((string) ($item['numero'] ?? ''));
+            $numeroEstante = trim((string) (($item['numero_estante'] ?? '') ?: ($item['numero'] ?? '')));
+            $modulos[$key] = [
+                'key' => $key,
+                'label' => $isModulo ? mapa_acervo_codigo_curto('M', $numero) : mapa_acervo_codigo_curto('Estante', $numeroEstante),
+                'tipo' => $isModulo ? 'Modulo deslizante' : 'Estante',
+                'total' => 0,
+                'items' => [],
+            ];
+        }
+        $modulos[$key]['total']++;
+        $modulos[$key]['items'][] = $item;
+    }
+
+    foreach ($modulos as &$modulo) {
+        usort($modulo['items'], fn ($a, $b) => mapa_acervo_ordem_estante($a) <=> mapa_acervo_ordem_estante($b));
+    }
+    unset($modulo);
+
+    uasort($modulos, fn ($a, $b) => strnatcasecmp((string) $a['label'], (string) $b['label']));
+    return $modulos;
+}
+
+function mapa_acervo_ordem_estante(array $item): int
+{
+    $value = trim((string) (($item['numero_estante'] ?? '') ?: ($item['numero'] ?? '')));
+    $digits = preg_replace('/\D+/', '', $value);
+    return $digits !== '' ? (int) $digits : 0;
+}
+
+function mapa_acervo_modulo_key(array $item): string
+{
+    if (($item['tipo'] ?? '') !== 'modulo_deslizante') {
+        $numeroEstante = trim((string) (($item['numero_estante'] ?? '') ?: ($item['numero'] ?? '')));
+        $numeroEstante = preg_replace('/\s+/', '', strtolower($numeroEstante));
+        return 'estante-' . ($numeroEstante !== '' ? $numeroEstante : 'sem-numero');
+    }
+
+    $numero = preg_replace('/\s+/', '', strtolower(trim((string) ($item['numero'] ?? ''))));
+    return 'modulo-' . ($numero !== '' ? $numero : 'sem-numero');
+}
+
+function mapa_acervo_codigo_curto(string $prefix, string $value): string
+{
+    $value = trim($value);
+    $separator = strtolower($prefix) === 'estante' ? ' ' : '-';
+
+    if (strtolower($prefix) === 'estante') {
+        $value = preg_replace('/^estante\s*-?\s*/i', '', $value);
+        $value = preg_replace('/^e\s*-?\s*/i', '', (string) $value);
+        $value = trim((string) $value);
+    }
+
+    if ($value === '') {
+        return $prefix . $separator . '00';
+    }
+    if (preg_match('/^' . preg_quote($prefix, '/') . '\s*-/i', $value)) {
+        $normalized = strtoupper(str_replace(' ', '', $value));
+        return $separator === ' ' ? str_replace('-', ' ', $normalized) : $normalized;
+    }
+    if (ctype_digit($value)) {
+        return $prefix . $separator . str_pad($value, 2, '0', STR_PAD_LEFT);
+    }
+    return $prefix . $separator . strtoupper($value);
+}
+
+function render_mapa_modulo_grupo(array $modulo): void
+{
+    ?>
+    <section class="mapa-modulo-grupo" data-mapa-modulo-card="<?= h((string) $modulo['key']) ?>" hidden>
+        <div class="mapa-modulo-grupo-head">
+            <div>
+                <span><?= h((string) $modulo['tipo']) ?></span>
+                <strong><?= h((string) $modulo['label']) ?></strong>
+            </div>
+            <em><?= h((string) $modulo['total']) ?> estante(s) agrupada(s)</em>
+        </div>
+        <div class="mapa-modulo-grupo-grid">
+            <?php foreach ($modulo['items'] as $item): render_mapa_estrutura($item, false); endforeach; ?>
+        </div>
+    </section>
+    <?php
+}
+
+function render_mapa_estrutura(array $item, bool $hidden = true): void
 {
     $prateleiras = max(1, (int) ($item['prateleiras'] ?? 1));
     $capacidade = max(1, (int) ($item['capacidade_por_prateleira'] ?? 1));
@@ -1439,14 +1591,30 @@ function render_mapa_estrutura(array $item): void
     $livres = max(0, $total - $ocupadas);
     $percent = $total > 0 ? min(100, round(($ocupadas / $total) * 100)) : 0;
     $ocupacaoPrateleiras = mapa_acervo_prateleiras_ocupacao($item);
+    $caixasCores = mapa_acervo_caixas_cores($item);
     $corSetor = mapa_acervo_cor_setor($item);
+    $moduloKey = mapa_acervo_modulo_key($item);
+    $estanteLabel = trim((string) ($item['numero_estante'] ?? ''));
+    if ($estanteLabel === '') {
+        $estanteLabel = trim((string) ($item['numero'] ?? ''));
+    }
+    $estanteLabel = $estanteLabel !== '' ? mapa_acervo_codigo_curto('Estante', $estanteLabel) : 'Estante 00';
     ?>
-    <article class="mapa-estrutura <?= h((string) ($item['tipo'] ?? '')) ?>" style="--sector: <?= h($corSetor) ?>">
+    <article class="mapa-estrutura <?= h((string) ($item['tipo'] ?? '')) ?>" style="--sector: <?= h($corSetor) ?>" data-mapa-modulo-card="<?= h($moduloKey) ?>" <?= $hidden ? 'hidden' : '' ?>>
         <div class="mapa-estrutura-head">
             <div>
                 <span><?= h(mapa_acervo_tipo_label((string) ($item['tipo'] ?? ''))) ?></span>
-                <strong><i class="mapa-sector-dot"></i>N. <?= h($item['numero'] ?? '') ?></strong>
-                <?php if (trim((string) ($item['numero_estante'] ?? '')) !== ''): ?><small class="mapa-estrutura-subcode">Estante <?= h((string) $item['numero_estante']) ?></small><?php endif; ?>
+                <strong>
+                    <span class="mapa-sector-picker">
+                        <input type="color"
+                               value="<?= h($corSetor) ?>"
+                               data-mapa-sector-color
+                               data-id="<?= h((string) ($item['id'] ?? 0)) ?>"
+                               aria-label="Cor da estrutura <?= h($estanteLabel) ?>">
+                    </span>
+                    <?= h($estanteLabel) ?>
+                    <button class="mapa-apply-sector-color" type="button" data-mapa-apply-sector-color hidden>Aplicar</button>
+                </strong>
             </div>
             <div class="mapa-estrutura-actions">
                 <a class="mini-link" href="/?page=mapa_acervo&edit_mapa=<?= h((string) ($item['id'] ?? 0)) ?>">Editar</a>
@@ -1474,7 +1642,24 @@ function render_mapa_estrutura(array $item): void
                     <div class="mapa-caixas" title="<?= h((string) $naPrateleira) ?> de <?= h((string) $capacidade) ?> caixas">
                         <?php if ($capacidade <= 24): ?>
                             <?php for ($box = 1; $box <= $capacidade; $box++): ?>
-                                <i class="<?= $box <= $naPrateleira ? 'filled' : 'empty' ?>"></i>
+                                <?php
+                                $boxColor = (string) ($caixasCores[$shelf - 1][$box - 1] ?? '');
+                                $boxDisplayColor = $boxColor !== '' ? $boxColor : $corSetor;
+                                $boxStyle = ($box <= $naPrateleira && $boxColor !== '') ? ' style="--box-color: ' . h($boxColor) . '"' : '';
+                                ?>
+                                <?php if ($box <= $naPrateleira): ?>
+                                    <span class="mapa-caixa-color-picker filled"<?= $boxStyle ?>>
+                                        <input type="color"
+                                               value="<?= h($boxDisplayColor) ?>"
+                                               data-mapa-card-box-color
+                                               data-id="<?= h((string) ($item['id'] ?? 0)) ?>"
+                                               data-shelf="<?= h((string) ($shelf - 1)) ?>"
+                                               data-box="<?= h((string) ($box - 1)) ?>"
+                                               aria-label="Cor da caixa <?= h((string) $box) ?> na P<?= h((string) $shelf) ?>">
+                                    </span>
+                                <?php else: ?>
+                                    <i class="empty"></i>
+                                <?php endif; ?>
                             <?php endfor; ?>
                         <?php else: ?>
                             <em style="--w: <?= h((string) round(($naPrateleira / $capacidade) * 100)) ?>%"><b></b></em>

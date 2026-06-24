@@ -677,6 +677,37 @@ function mapa_acervo_posicao(int $id): ?array
     return $row ?: null;
 }
 
+function mapa_acervo_setores(): array
+{
+    return db()->query("
+        SELECT *
+        FROM acervo_mapa_setores
+        ORDER BY nome COLLATE NOCASE, id
+    ")->fetchAll();
+}
+
+function mapa_acervo_cores_sugeridas(): array
+{
+    return [
+        '#0ea5e9', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6',
+        '#14b8a6', '#ec4899', '#64748b', '#84cc16', '#f97316',
+        '#06b6d4', '#a855f7',
+    ];
+}
+
+function mapa_acervo_cores_livres(array $setores): array
+{
+    $usadas = array_map(
+        fn ($setor) => strtolower((string) ($setor['cor'] ?? '')),
+        $setores
+    );
+
+    return array_values(array_filter(
+        mapa_acervo_cores_sugeridas(),
+        fn ($cor) => !in_array(strtolower($cor), $usadas, true)
+    ));
+}
+
 function mapa_acervo_por_sala(array $rows): array
 {
     $salas = [];
@@ -764,6 +795,32 @@ function mapa_acervo_prateleiras_ocupacao(array $row): array
 function mapa_acervo_tipo_label(string $tipo): string
 {
     return $tipo === 'estante' ? 'Estante' : 'Modulo deslizante';
+}
+
+function mapa_acervo_caixas_cores(array $row): array
+{
+    $prateleiras = max(1, (int) ($row['prateleiras'] ?? 1));
+    $capacidade = max(1, (int) ($row['capacidade_por_prateleira'] ?? 1));
+    $raw = trim((string) ($row['caixas_cores'] ?? ''));
+    $decoded = [];
+
+    if ($raw !== '') {
+        $data = json_decode($raw, true);
+        if (is_array($data)) {
+            $decoded = $data;
+        }
+    }
+
+    $result = [];
+    for ($shelf = 0; $shelf < $prateleiras; $shelf++) {
+        $result[$shelf] = [];
+        for ($box = 0; $box < $capacidade; $box++) {
+            $color = strtolower(trim((string) ($decoded[$shelf][$box] ?? '')));
+            $result[$shelf][$box] = preg_match('/^#[0-9a-f]{6}$/', $color) ? $color : '';
+        }
+    }
+
+    return $result;
 }
 
 function mapa_acervo_vazios_rows(): array
