@@ -1193,12 +1193,14 @@ function render_mapa_acervo(): void
         'sala' => '',
         'tipo' => 'modulo_deslizante',
         'numero' => '',
+        'numero_estante' => '',
         'prateleiras' => 10,
         'capacidade_por_prateleira' => 7,
         'caixas_ocupadas' => 0,
         'cor_setor' => '#0ea5e9',
         'observacao' => '',
     ];
+    $editingOcupacao = mapa_acervo_prateleiras_ocupacao($editing);
     ?>
     <section class="mapa-acervo-page">
         <div class="dashboard-hero mapa-hero">
@@ -1226,7 +1228,7 @@ function render_mapa_acervo(): void
         <?php endif; ?>
 
         <section class="mapa-editor-grid">
-            <form method="post" class="panel mapa-form" autocomplete="off">
+            <form method="post" class="panel mapa-form" autocomplete="off" data-mapa-form>
                 <input type="hidden" name="action" value="save_mapa_posicao">
                 <input type="hidden" name="return_page" value="mapa_acervo">
                 <input type="hidden" name="id" value="<?= h((string) ($editing['id'] ?? 0)) ?>">
@@ -1246,24 +1248,34 @@ function render_mapa_acervo(): void
                             <option value="estante" <?= (($editing['tipo'] ?? '') === 'estante') ? 'selected' : '' ?>>Estante</option>
                         </select>
                     </label>
-                    <label>Numero
+                    <label class="mapa-number-field">N. do Modulo
                         <input name="numero" value="<?= h($editing['numero'] ?? '') ?>" placeholder="Ex: 01" required>
                     </label>
+                    <label class="mapa-number-field">N. da Estante
+                        <input name="numero_estante" value="<?= h($editing['numero_estante'] ?? '') ?>" placeholder="Ex: E01">
+                    </label>
                     <label>Prateleiras
-                        <input name="prateleiras" type="number" min="1" value="<?= h((string) ($editing['prateleiras'] ?? 10)) ?>" required>
+                        <input name="prateleiras" type="number" min="1" value="<?= h((string) ($editing['prateleiras'] ?? 10)) ?>" required data-mapa-prateleiras>
                     </label>
                     <label>Caixas por prateleira
-                        <input name="capacidade_por_prateleira" type="number" min="1" value="<?= h((string) ($editing['capacidade_por_prateleira'] ?? 7)) ?>" required>
+                        <input name="capacidade_por_prateleira" type="number" min="1" value="<?= h((string) ($editing['capacidade_por_prateleira'] ?? 7)) ?>" required data-mapa-capacidade>
                     </label>
                     <label>Caixas ocupadas
-                        <input name="caixas_ocupadas" type="number" min="0" value="<?= h((string) ($editing['caixas_ocupadas'] ?? 0)) ?>" required>
+                        <input name="caixas_ocupadas" type="number" min="0" value="<?= h((string) ($editing['caixas_ocupadas'] ?? 0)) ?>" required data-mapa-total readonly>
                     </label>
-                    <label class="mapa-color-field">Cor do setor
+                    <label class="mapa-color-field mapa-color-field-right">Cor do setor
                         <span>
                             <input name="cor_setor" type="color" value="<?= h((string) ($editing['cor_setor'] ?? '#0ea5e9')) ?>">
                             <b><?= h((string) ($editing['cor_setor'] ?? '#0ea5e9')) ?></b>
                         </span>
                     </label>
+                    <div class="wide mapa-shelf-editor" data-mapa-shelf-editor data-values="<?= h(json_encode($editingOcupacao, JSON_UNESCAPED_UNICODE)) ?>">
+                        <div>
+                            <span>Ocupacao por prateleira</span>
+                            <small>Informe quantas caixas existem em cada P. O total sera calculado automaticamente.</small>
+                        </div>
+                        <div class="mapa-shelf-grid" data-mapa-shelf-grid></div>
+                    </div>
                     <label class="wide">Observacao
                         <input name="observacao" value="<?= h($editing['observacao'] ?? '') ?>" placeholder="Ex: corredor, restricao, caixas avulsas...">
                     </label>
@@ -1426,7 +1438,7 @@ function render_mapa_estrutura(array $item): void
     $total = mapa_acervo_capacidade_total($item);
     $livres = max(0, $total - $ocupadas);
     $percent = $total > 0 ? min(100, round(($ocupadas / $total) * 100)) : 0;
-    $restante = $ocupadas;
+    $ocupacaoPrateleiras = mapa_acervo_prateleiras_ocupacao($item);
     $corSetor = mapa_acervo_cor_setor($item);
     ?>
     <article class="mapa-estrutura <?= h((string) ($item['tipo'] ?? '')) ?>" style="--sector: <?= h($corSetor) ?>">
@@ -1434,6 +1446,7 @@ function render_mapa_estrutura(array $item): void
             <div>
                 <span><?= h(mapa_acervo_tipo_label((string) ($item['tipo'] ?? ''))) ?></span>
                 <strong><i class="mapa-sector-dot"></i>N. <?= h($item['numero'] ?? '') ?></strong>
+                <?php if (trim((string) ($item['numero_estante'] ?? '')) !== ''): ?><small class="mapa-estrutura-subcode">Estante <?= h((string) $item['numero_estante']) ?></small><?php endif; ?>
             </div>
             <div class="mapa-estrutura-actions">
                 <a class="mini-link" href="/?page=mapa_acervo&edit_mapa=<?= h((string) ($item['id'] ?? 0)) ?>">Editar</a>
@@ -1454,8 +1467,7 @@ function render_mapa_estrutura(array $item): void
         <div class="mapa-prateleiras">
             <?php for ($shelf = 1; $shelf <= $prateleiras; $shelf++): ?>
                 <?php
-                $naPrateleira = min($capacidade, $restante);
-                $restante = max(0, $restante - $naPrateleira);
+                $naPrateleira = min($capacidade, max(0, (int) ($ocupacaoPrateleiras[$shelf - 1] ?? 0)));
                 ?>
                 <div class="mapa-prateleira">
                     <span>P<?= h((string) $shelf) ?></span>

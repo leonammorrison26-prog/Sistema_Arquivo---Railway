@@ -198,6 +198,72 @@ document.querySelectorAll('.mapa-color-field input[type="color"]').forEach((inpu
     syncColor();
 });
 
+document.querySelectorAll('[data-mapa-form]').forEach((form) => {
+    const shelfEditor = form.querySelector('[data-mapa-shelf-editor]');
+    const shelfGrid = form.querySelector('[data-mapa-shelf-grid]');
+    const shelvesInput = form.querySelector('[data-mapa-prateleiras]');
+    const capacityInput = form.querySelector('[data-mapa-capacidade]');
+    const totalInput = form.querySelector('[data-mapa-total]');
+    if (!shelfEditor || !shelfGrid || !shelvesInput || !capacityInput || !totalInput) return;
+
+    let values = [];
+    try {
+        values = JSON.parse(shelfEditor.dataset.values || '[]');
+    } catch (_error) {
+        values = [];
+    }
+
+    function currentShelfValues() {
+        const inputs = Array.from(shelfGrid.querySelectorAll('input[name="prateleiras_ocupacao[]"]'));
+        return inputs.map((input) => Math.max(0, Number.parseInt(input.value || '0', 10) || 0));
+    }
+
+    function syncTotal() {
+        const capacity = Math.max(1, Number.parseInt(capacityInput.value || '1', 10) || 1);
+        let total = 0;
+        shelfGrid.querySelectorAll('input[name="prateleiras_ocupacao[]"]').forEach((input) => {
+            let value = Math.max(0, Number.parseInt(input.value || '0', 10) || 0);
+            if (value > capacity) value = capacity;
+            total += value;
+        });
+        totalInput.value = total.toString();
+    }
+
+    function normalizeShelfInput(input) {
+        const capacity = Math.max(1, Number.parseInt(capacityInput.value || '1', 10) || 1);
+        let value = Math.max(0, Number.parseInt(input.value || '0', 10) || 0);
+        if (value > capacity) value = capacity;
+        input.value = value > 0 ? value.toString() : '';
+        syncTotal();
+    }
+
+    function renderShelves() {
+        const previous = currentShelfValues();
+        if (previous.length) values = previous;
+        const shelves = Math.max(1, Number.parseInt(shelvesInput.value || '1', 10) || 1);
+        const capacity = Math.max(1, Number.parseInt(capacityInput.value || '1', 10) || 1);
+        shelfGrid.innerHTML = '';
+
+        for (let index = 0; index < shelves; index += 1) {
+            const label = document.createElement('label');
+            label.className = 'mapa-shelf-field';
+            const value = Math.min(capacity, Math.max(0, Number.parseInt(values[index] || '0', 10) || 0));
+            label.innerHTML = `<span>P${index + 1}</span><input name="prateleiras_ocupacao[]" type="number" inputmode="numeric" min="0" max="${capacity}" placeholder="0" value="${value > 0 ? value : ''}" aria-label="Caixas na P${index + 1}">`;
+            shelfGrid.appendChild(label);
+        }
+
+        shelfGrid.querySelectorAll('input').forEach((input) => {
+            input.addEventListener('input', syncTotal);
+            input.addEventListener('blur', () => normalizeShelfInput(input));
+        });
+        syncTotal();
+    }
+
+    shelvesInput.addEventListener('input', renderShelves);
+    capacityInput.addEventListener('input', renderShelves);
+    renderShelves();
+});
+
 const indicadorForm = document.querySelector('[data-indicador-form]');
 if (indicadorForm) {
     const inputs = Array.from(indicadorForm.querySelectorAll('[data-indicador-input]'));

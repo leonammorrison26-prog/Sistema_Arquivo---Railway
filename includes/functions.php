@@ -726,6 +726,41 @@ function mapa_acervo_capacidade_total(array $row): int
     return max(1, (int) ($row['prateleiras'] ?? 1)) * max(1, (int) ($row['capacidade_por_prateleira'] ?? 1));
 }
 
+function mapa_acervo_prateleiras_ocupacao(array $row): array
+{
+    $prateleiras = max(1, (int) ($row['prateleiras'] ?? 1));
+    $capacidade = max(1, (int) ($row['capacidade_por_prateleira'] ?? 1));
+    $ocupadas = max(0, (int) ($row['caixas_ocupadas'] ?? 0));
+    $data = [];
+    $raw = trim((string) ($row['prateleiras_ocupacao'] ?? ''));
+
+    if ($raw !== '') {
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded)) {
+            $data = $decoded;
+        }
+    }
+
+    $result = [];
+    $sum = 0;
+    for ($i = 1; $i <= $prateleiras; $i++) {
+        $value = max(0, min($capacidade, (int) ($data[$i - 1] ?? 0)));
+        $result[] = $value;
+        $sum += $value;
+    }
+
+    if ($sum === 0 && $ocupadas > 0) {
+        $remaining = $ocupadas;
+        foreach ($result as $idx => $_value) {
+            $value = min($capacidade, $remaining);
+            $result[$idx] = $value;
+            $remaining = max(0, $remaining - $value);
+        }
+    }
+
+    return $result;
+}
+
 function mapa_acervo_tipo_label(string $tipo): string
 {
     return $tipo === 'estante' ? 'Estante' : 'Modulo deslizante';
@@ -745,7 +780,8 @@ function mapa_acervo_vazios_rows(): array
         $rows[] = [
             'Sala' => (string) ($row['sala'] ?? ''),
             'Tipo' => mapa_acervo_tipo_label((string) ($row['tipo'] ?? '')),
-            'Numero' => (string) ($row['numero'] ?? ''),
+            'Modulo' => (string) ($row['numero'] ?? ''),
+            'Estante' => (string) ($row['numero_estante'] ?? ''),
             'Prateleiras' => (int) ($row['prateleiras'] ?? 0),
             'Caixas por prateleira' => (int) ($row['capacidade_por_prateleira'] ?? 0),
             'Capacidade total' => $capacidadeTotal,

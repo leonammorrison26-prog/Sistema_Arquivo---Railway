@@ -561,9 +561,11 @@ function save_mapa_posicao(): void
     $sala = trim((string) ($_POST['sala'] ?? ''));
     $tipo = trim((string) ($_POST['tipo'] ?? 'modulo_deslizante'));
     $numero = trim((string) ($_POST['numero'] ?? ''));
+    $numeroEstante = trim((string) ($_POST['numero_estante'] ?? ''));
     $prateleiras = max(1, (int) ($_POST['prateleiras'] ?? 1));
     $capacidade = max(1, (int) ($_POST['capacidade_por_prateleira'] ?? 1));
     $caixas = max(0, (int) ($_POST['caixas_ocupadas'] ?? 0));
+    $prateleirasInput = is_array($_POST['prateleiras_ocupacao'] ?? null) ? $_POST['prateleiras_ocupacao'] : [];
     $corSetor = trim((string) ($_POST['cor_setor'] ?? '#0ea5e9'));
     $observacao = trim((string) ($_POST['observacao'] ?? ''));
 
@@ -581,6 +583,21 @@ function save_mapa_posicao(): void
     }
 
     $total = $prateleiras * $capacidade;
+    $ocupacaoPrateleiras = [];
+    $somaPrateleiras = 0;
+    for ($i = 1; $i <= $prateleiras; $i++) {
+        $value = max(0, (int) ($prateleirasInput[$i - 1] ?? 0));
+        if ($value > $capacidade) {
+            throw new RuntimeException('A P' . $i . ' nao pode passar de ' . $capacidade . ' caixas.');
+        }
+        $ocupacaoPrateleiras[] = $value;
+        $somaPrateleiras += $value;
+    }
+
+    if ($somaPrateleiras > 0 || $prateleirasInput !== []) {
+        $caixas = $somaPrateleiras;
+    }
+
     if ($caixas > $total) {
         throw new RuntimeException('As caixas ocupadas nao podem passar da capacidade total de ' . $total . '.');
     }
@@ -589,9 +606,11 @@ function save_mapa_posicao(): void
         ':sala' => $sala,
         ':tipo' => $tipo,
         ':numero' => $numero,
+        ':numero_estante' => $numeroEstante,
         ':prateleiras' => $prateleiras,
         ':capacidade_por_prateleira' => $capacidade,
         ':caixas_ocupadas' => $caixas,
+        ':prateleiras_ocupacao' => json_encode($ocupacaoPrateleiras, JSON_UNESCAPED_UNICODE),
         ':cor_setor' => strtolower($corSetor),
         ':observacao' => $observacao,
         ':atualizado_em' => date('Y-m-d H:i:s'),
@@ -604,9 +623,11 @@ function save_mapa_posicao(): void
                 sala = :sala,
                 tipo = :tipo,
                 numero = :numero,
+                numero_estante = :numero_estante,
                 prateleiras = :prateleiras,
                 capacidade_por_prateleira = :capacidade_por_prateleira,
                 caixas_ocupadas = :caixas_ocupadas,
+                prateleiras_ocupacao = :prateleiras_ocupacao,
                 cor_setor = :cor_setor,
                 observacao = :observacao,
                 atualizado_em = :atualizado_em
@@ -619,9 +640,9 @@ function save_mapa_posicao(): void
 
     db()->prepare("
         INSERT INTO acervo_mapa_posicoes
-            (sala, tipo, numero, prateleiras, capacidade_por_prateleira, caixas_ocupadas, cor_setor, observacao, criado_em, atualizado_em)
+            (sala, tipo, numero, numero_estante, prateleiras, capacidade_por_prateleira, caixas_ocupadas, prateleiras_ocupacao, cor_setor, observacao, criado_em, atualizado_em)
         VALUES
-            (:sala, :tipo, :numero, :prateleiras, :capacidade_por_prateleira, :caixas_ocupadas, :cor_setor, :observacao, :atualizado_em, :atualizado_em)
+            (:sala, :tipo, :numero, :numero_estante, :prateleiras, :capacidade_por_prateleira, :caixas_ocupadas, :prateleiras_ocupacao, :cor_setor, :observacao, :atualizado_em, :atualizado_em)
     ")->execute($params);
     $_SESSION['flash_success'] = 'Posicao adicionada ao mapa.';
     system_event('mapa_acervo_criado', 'Posicao fisica criada', ['sala' => $sala, 'numero' => $numero]);
