@@ -1209,7 +1209,7 @@ function render_mapa_acervo(): void
         <div class="dashboard-hero mapa-hero">
             <div>
                 <span class="eyebrow">Mapa do Acervo</span>
-                <h2>Ocupacao fisica por sala, estante e modulo</h2>
+                <h2>Ocupacao fisica por sala, modulo e estante</h2>
                 <p>Cadastre a capacidade real de cada estrutura e acompanhe onde ainda existe espaco para novas caixas.</p>
             </div>
             <div class="dashboard-actions">
