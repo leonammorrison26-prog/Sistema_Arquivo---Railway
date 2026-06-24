@@ -119,8 +119,8 @@ function render_central(): void
         <div class="dashboard-hero">
             <div>
                 <span class="eyebrow">Central de Trabalho</span>
-                <h2>O que precisa de atenção hoje?</h2>
-                <p>Um painel de partida para consulta, cadastro, sincronização, diagnóstico e revisão rápida do acervo.</p>
+                <h2>O que precisa de atenÃ§Ã£o hoje?</h2>
+                <p>Um painel de partida para consulta, cadastro, sincronizaÃ§Ã£o, diagnÃ³stico e revisÃ£o rÃ¡pida do acervo.</p>
             </div>
             <div class="dashboard-actions">
                 <a class="button primary" href="/?page=busca">Consultar acervo</a>
@@ -133,8 +133,8 @@ function render_central(): void
         <?php endif; ?>
         <div class="dashboard-grid">
             <section class="dashboard-card quality-card">
-                <div class="dashboard-card-head"><div><span class="eyebrow">Atenção</span><h3>Fila de melhoria</h3></div></div>
-                <?php if (!$attention): ?><div class="empty-state">Nada crítico encontrado agora.</div><?php endif; ?>
+                <div class="dashboard-card-head"><div><span class="eyebrow">AtenÃ§Ã£o</span><h3>Fila de melhoria</h3></div></div>
+                <?php if (!$attention): ?><div class="empty-state">Nada crÃ­tico encontrado agora.</div><?php endif; ?>
                 <div class="quality-list">
                     <?php foreach ($attention as $item): ?>
                         <a class="quality-row" href="<?= h($item['href']) ?>"><span><?= h($item['label']) ?></span><strong><?= h(number_format((int) $item['value'], 0, ',', '.')) ?></strong><em>corrigir</em><i style="--w: 100%"></i></a>
@@ -142,9 +142,9 @@ function render_central(): void
                 </div>
             </section>
             <section class="dashboard-card">
-                <div class="dashboard-card-head"><div><span class="eyebrow">Importação</span><h3>Últimos jobs</h3></div><a class="mini-link" href="/?page=diagnostico">Diagnóstico</a></div>
+                <div class="dashboard-card-head"><div><span class="eyebrow">ImportaÃ§Ã£o</span><h3>Ãšltimos jobs</h3></div><a class="mini-link" href="/?page=diagnostico">DiagnÃ³stico</a></div>
                 <div class="activity-list">
-                    <?php foreach ($jobs as $job): ?><article><strong><?= h($job['status']) ?></strong><span><?= h($job['tipo']) ?> · <?= h((string) $job['total_registros']) ?> registro(s)</span><em><?= h($job['concluido_em'] ?: $job['criado_em']) ?></em></article><?php endforeach; ?>
+                    <?php foreach ($jobs as $job): ?><article><strong><?= h($job['status']) ?></strong><span><?= h($job['tipo']) ?> Â· <?= h((string) $job['total_registros']) ?> registro(s)</span><em><?= h($job['concluido_em'] ?: $job['criado_em']) ?></em></article><?php endforeach; ?>
                 </div>
             </section>
             <section class="dashboard-card">
@@ -155,9 +155,9 @@ function render_central(): void
                 </div>
             </section>
             <section class="dashboard-card wide">
-                <div class="dashboard-card-head"><div><span class="eyebrow">Timeline</span><h3>Últimos eventos</h3></div></div>
+                <div class="dashboard-card-head"><div><span class="eyebrow">Timeline</span><h3>Ãšltimos eventos</h3></div></div>
                 <div class="activity-list">
-                    <?php foreach ($events as $event): ?><article><strong><?= h($event['tipo']) ?></strong><span><?= h($event['mensagem']) ?></span><em><?= h($event['usuario_nome'] ?: $event['usuario_login'] ?: 'Sistema') ?> · <?= h($event['criado_em']) ?></em></article><?php endforeach; ?>
+                    <?php foreach ($events as $event): ?><article><strong><?= h($event['tipo']) ?></strong><span><?= h($event['mensagem']) ?></span><em><?= h($event['usuario_nome'] ?: $event['usuario_login'] ?: 'Sistema') ?> Â· <?= h($event['criado_em']) ?></em></article><?php endforeach; ?>
                 </div>
             </section>
         </div>
@@ -222,7 +222,7 @@ function render_sei_queue_widget(): void
             <span class="eyebrow">Demanda SEI</span>
             <?php if (!$next): ?>
                 <h2>Fila aguardando terceirizados</h2>
-                <p>Cadastre usuários como terceirizados para ativar o rodízio de atendimentos.</p>
+                <p>Cadastre usuÃ¡rios como terceirizados para ativar o rodÃ­zio de atendimentos.</p>
             <?php elseif ($state['is_turn']): ?>
                 <h2>Pr&oacute;xima demanda do SEI &eacute; sua!</h2>
                 <p>Registre o processo atendido para liberar automaticamente o pr&oacute;ximo colega da fila.</p>
@@ -269,10 +269,10 @@ function render_acervo_card(array $row, string $searchContext = ''): void
     ?>
     <details class="result-card">
         <summary class="result-summary">
-            <span class="result-chevron">›</span>
-            <span class="result-box-icon" aria-hidden="true">📦</span>
+            <span class="result-chevron">â€º</span>
+            <span class="result-box-icon" aria-hidden="true">ðŸ“¦</span>
             <strong class="result-box">CX: <?= h($row['CAIXA'] ?? '---') ?></strong>
-            <span class="result-doc-icon" aria-hidden="true">📄</span>
+            <span class="result-doc-icon" aria-hidden="true">ðŸ“„</span>
             <span class="result-subject"><?= h($row['ASSUNTO'] ?? '---') ?></span>
             <span class="result-divider">|</span>
             <em class="result-status"><?= h($displayStatus) ?></em>
@@ -383,7 +383,7 @@ function render_cad_processo(): void
                 </div>
                 <div class="manual-grid">
                     <label>Unidade <input name="UNIDADE" value="DIARQ / MDS" autocomplete="off"></label>
-                    <label>Nº de Caixa * <input name="CAIXA" required autocomplete="off"></label>
+                    <label>NÂº de Caixa * <input name="CAIXA" required autocomplete="off"></label>
                     <label>Tipo de Documento <input name="TIPO_DOCUMENTO" autocomplete="off"></label>
                     <label>Localizacao <input name="LOCALIZACAO" autocomplete="off"></label>
                     <label>Data-limite <input name="DATA_LIMITE" autocomplete="off"></label>
@@ -407,7 +407,7 @@ function render_cad_processo(): void
                             <button type="button" class="small danger manual-remove" data-remove-manual-item hidden>Remover</button>
                         </div>
                         <div class="manual-grid item-grid">
-                            <label>Nº de Processo ou Servidor * <input name="PROCESSO[]" required autocomplete="off"></label>
+                            <label>NÂº de Processo ou Servidor * <input name="PROCESSO[]" required autocomplete="off"></label>
                             <label>Volumes <input name="VOLUMES[]" autocomplete="off"></label>
                             <label>Interessado <input name="INTERESSADO[]" autocomplete="off"></label>
                             <label>Assunto <input name="ASSUNTO[]" autocomplete="off"></label>
@@ -508,18 +508,18 @@ function render_planilha(): void
         <div class="cadastros-hero">
             <div>
                 <span class="eyebrow">Planilha operacional</span>
-                <h2>Visualização de Cadastros</h2>
-                <p>Registros manuais e cadastros sem origem importada, organizados para conferência e limpeza.</p>
+                <h2>VisualizaÃ§Ã£o de Cadastros</h2>
+                <p>Registros manuais e cadastros sem origem importada, organizados para conferÃªncia e limpeza.</p>
             </div>
             <div class="cadastros-stats">
                 <div><strong><?= h((string) $total) ?></strong><span>Registros</span></div>
-                <div><strong><?= h((string) $totalPages) ?></strong><span>Páginas</span></div>
+                <div><strong><?= h((string) $totalPages) ?></strong><span>PÃ¡ginas</span></div>
             </div>
         </div>
 
         <form class="cadastros-filters" method="get">
             <input type="hidden" name="page" value="planilha">
-            <label>Filtrar por responsável
+            <label>Filtrar por responsÃ¡vel
                 <select name="responsavel">
                     <option value="">Todos</option>
                     <?php foreach ($responsaveis as $resp): ?>
@@ -566,10 +566,10 @@ function render_planilha(): void
                                 <th>Volumes</th>
                                 <th>Interessado</th>
                                 <th>Assunto</th>
-                                <th>Localização</th>
-                                <th>Responsável</th>
+                                <th>LocalizaÃ§Ã£o</th>
+                                <th>ResponsÃ¡vel</th>
                                 <th>Data-limite</th>
-                                <th>Ações</th>
+                                <th>AÃ§Ãµes</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -591,14 +591,14 @@ function render_planilha(): void
                     </table>
                 </div>
 
-                <nav class="pagination" aria-label="Paginação">
+                <nav class="pagination" aria-label="PaginaÃ§Ã£o">
                     <?php
                     $prevQuery = $baseQuery + ['p' => max(1, $pageNum - 1)];
                     $nextQuery = $baseQuery + ['p' => min($totalPages, $pageNum + 1)];
                     ?>
                     <a class="button <?= $pageNum <= 1 ? 'disabled' : '' ?>" href="/?<?= h(http_build_query($prevQuery)) ?>">Anterior</a>
-                    <span>Página <?= h((string) $pageNum) ?> de <?= h((string) $totalPages) ?></span>
-                    <a class="button <?= $pageNum >= $totalPages ? 'disabled' : '' ?>" href="/?<?= h(http_build_query($nextQuery)) ?>">Próxima</a>
+                    <span>PÃ¡gina <?= h((string) $pageNum) ?> de <?= h((string) $totalPages) ?></span>
+                    <a class="button <?= $pageNum >= $totalPages ? 'disabled' : '' ?>" href="/?<?= h(http_build_query($nextQuery)) ?>">PrÃ³xima</a>
                 </nav>
             <?php endif; ?>
         </form>
@@ -622,11 +622,11 @@ function render_usuarios(): void
         <div class="users-hero">
             <div>
                 <span class="eyebrow">Controle de acesso</span>
-                <h2>Gestão de Usuários e Permissões</h2>
-                <p>Cadastre colaboradores, defina perfis e mantenha permissões essenciais organizadas em um só lugar.</p>
+                <h2>GestÃ£o de UsuÃ¡rios e PermissÃµes</h2>
+                <p>Cadastre colaboradores, defina perfis e mantenha permissÃµes essenciais organizadas em um sÃ³ lugar.</p>
             </div>
             <div class="users-stats">
-                <div><strong><?= $totalUsers ?></strong><span>Usuários</span></div>
+                <div><strong><?= $totalUsers ?></strong><span>UsuÃ¡rios</span></div>
                 <div><strong><?= $totalAdmins ?></strong><span>Admins</span></div>
                 <div><strong><?= $totalSync ?></strong><span>Sync</span></div>
             </div>
@@ -637,9 +637,9 @@ function render_usuarios(): void
                 <div class="section-heading">
                     <div>
                         <span class="eyebrow">Novo cadastro</span>
-                        <h3>Dados do usuário</h3>
+                        <h3>Dados do usuÃ¡rio</h3>
                     </div>
-                    <span class="section-chip">Supabase obrigatório</span>
+                    <span class="section-chip">Supabase obrigatÃ³rio</span>
                 </div>
 
                 <form method="post" class="user-form">
@@ -654,15 +654,15 @@ function render_usuarios(): void
 
                     <div class="permission-panel span-2">
                         <div class="permission-title">
-                            <strong>Permissões</strong>
-                            <span>Escolha o que este usuário pode acessar</span>
+                            <strong>PermissÃµes</strong>
+                            <span>Escolha o que este usuÃ¡rio pode acessar</span>
                         </div>
                         <div class="permission-grid">
-                            <label class="permission-item"><input type="checkbox" name="p_gerir_usuarios"><span>Gerir usuários</span></label>
+                            <label class="permission-item"><input type="checkbox" name="p_gerir_usuarios"><span>Gerir usuÃ¡rios</span></label>
                             <label class="permission-item"><input type="checkbox" name="p_sincronizar"><span>Sincronizar</span></label>
                             <label class="permission-item"><input type="checkbox" name="p_cadastrar_caixa" checked><span>Cadastrar caixa</span></label>
                             <label class="permission-item"><input type="checkbox" name="p_botao_editar" checked><span>Editar acervo</span></label>
-                            <label class="permission-item"><input type="checkbox" name="p_emprestimo"><span>Empréstimo</span></label>
+                            <label class="permission-item"><input type="checkbox" name="p_emprestimo"><span>EmprÃ©stimo</span></label>
                             <label class="permission-item"><input type="checkbox" name="TROCAR_SENHA"><span>Trocar senha no primeiro acesso</span></label>
                         </div>
                     </div>
@@ -677,7 +677,7 @@ function render_usuarios(): void
                 <div class="section-heading">
                     <div>
                         <span class="eyebrow">Equipe ativa</span>
-                        <h3>Usuários cadastrados</h3>
+                        <h3>UsuÃ¡rios cadastrados</h3>
                     </div>
                     <span class="section-chip"><?= $totalUsers ?> registro(s)</span>
                 </div>
@@ -693,7 +693,7 @@ function render_usuarios(): void
                             <div class="avatar"><?= h($initial) ?></div>
                             <div class="user-main">
                                 <strong><?= h($user['nome'] ?: 'Sem nome') ?></strong>
-                                <span><?= h($user['login'] ?: 'sem-login') ?> · <?= h($user['departamento'] ?: 'DIARQ') ?></span>
+                                <span><?= h($user['login'] ?: 'sem-login') ?> Â· <?= h($user['departamento'] ?: 'DIARQ') ?></span>
                             </div>
                             <div class="user-badges">
                                 <span class="badge"><?= h($user['tipo_usuario'] ?: 'Servidor') ?></span>
@@ -766,7 +766,7 @@ function render_documentos(): void
             <div>
                 <span class="eyebrow">Gerador de documentos</span>
                 <h2><?= $doc === 'guia' ? 'Guia Fora' : 'Etiqueta de Caixa' ?></h2>
-                <p>Preencha os campos abaixo e gere o PDF no padrão DIARQ/MDS.</p>
+                <p>Preencha os campos abaixo e gere o PDF no padrÃ£o DIARQ/MDS.</p>
             </div>
             <div class="doc-switch">
                 <a class="<?= $doc === 'etiqueta' ? 'active' : '' ?>" href="/?page=documentos&doc=etiqueta">Etiqueta de Caixa</a>
@@ -788,7 +788,7 @@ function render_documentos(): void
                     <label>Unidade <input name="unidade" value="DIARQ / MDS"></label>
                     <label>Caixa <input name="caixa" placeholder="Numero da caixa" required></label>
                     <label>Data-limite <input name="data_limite" value="<?= h(date('Y')) ?>"></label>
-                    <label>Localização <input name="localizacao" placeholder="Bloco / estante / prateleira"></label>
+                    <label>LocalizaÃ§Ã£o <input name="localizacao" placeholder="Bloco / estante / prateleira"></label>
                     <label class="span-2">Assunto <textarea name="assunto" rows="5" placeholder="Descreva o assunto da caixa"></textarea></label>
                     <div class="form-actions span-2">
                         <button class="primary user-submit" type="submit">Gerar Etiqueta PDF</button>
@@ -810,14 +810,14 @@ function render_documentos(): void
                     <label>VOL. <input name="vol" value="0001"></label>
                     <label>Interessado (Topo) <input name="interessado_topo"></label>
                     <label>Caixa <input name="caixa"></label>
-                    <label>Localização <input name="localizacao"></label>
+                    <label>LocalizaÃ§Ã£o <input name="localizacao"></label>
                     <label>Destino <input name="destino"></label>
                     <label>Interessado (Corpo) <input name="interessado_corpo"></label>
                     <label>Processo SEI <input name="processo_sei"></label>
                     <label>Solicitante <input name="solicitante"></label>
                     <label>Data <input name="data" value="<?= h(date('d/m/Y')) ?>"></label>
                     <label>Respons&aacute;vel DIARQ <input name="responsavel" value="<?= h($_SESSION['user']['nome'] ?? '') ?>"></label>
-                    <label class="span-2">Endereço <textarea name="endereco" rows="3"></textarea></label>
+                    <label class="span-2">EndereÃ§o <textarea name="endereco" rows="3"></textarea></label>
                     <div class="form-actions span-2">
                         <button class="primary user-submit" type="submit">Gerar Guia Fora PDF</button>
                     </div>
@@ -978,7 +978,7 @@ function render_dashboard(): void
     $qualityItems = [
         ['label' => 'Sem temporalidade', 'value' => (int) ($quality['sem_temp'] ?? 0), 'href' => '/?page=rel_temporalidade'],
         ['label' => 'Sem caixa', 'value' => (int) ($quality['sem_caixa'] ?? 0), 'href' => '/?page=busca&scope=geral&q=---'],
-        ['label' => 'Sem localização', 'value' => (int) ($quality['sem_localizacao'] ?? 0), 'href' => '/?page=busca&scope=caixas&q=---'],
+        ['label' => 'Sem localizaÃ§Ã£o', 'value' => (int) ($quality['sem_localizacao'] ?? 0), 'href' => '/?page=busca&scope=caixas&q=---'],
         ['label' => 'Sem interessado', 'value' => (int) ($quality['sem_interessado'] ?? 0), 'href' => '/?page=busca&scope=rh&q=---'],
         ['label' => 'Sem assunto', 'value' => (int) ($quality['sem_assunto'] ?? 0), 'href' => '/?page=busca&scope=geral&q=---'],
     ];
@@ -988,11 +988,11 @@ function render_dashboard(): void
             <div>
                 <span class="eyebrow">Painel operacional</span>
                 <h2>Dashboard DIARQ</h2>
-                <p>Visão rápida do acervo, qualidade dos cadastros, movimentações e pontos que precisam de atenção.</p>
+                <p>VisÃ£o rÃ¡pida do acervo, qualidade dos cadastros, movimentaÃ§Ãµes e pontos que precisam de atenÃ§Ã£o.</p>
             </div>
             <div class="dashboard-actions">
                 <a class="button" href="/?export=acervo"><?= app_icon('download') ?>Baixar acervo</a>
-                <a class="button" href="/?page=planilha">Gestão de cadastros</a>
+                <a class="button" href="/?page=planilha">GestÃ£o de cadastros</a>
                 <a class="button primary" href="/?page=assistente_openai">Perguntar ao assistente</a>
             </div>
         </div>
@@ -1000,14 +1000,14 @@ function render_dashboard(): void
         <div class="dashboard-kpis">
             <article class="kpi-card accent-blue"><span>Itens no acervo</span><strong><?= h($fmt($totals['itens'])) ?></strong><small><?= h($fmt($totals['processos'])) ?> processos identificados</small></article>
             <article class="kpi-card accent-cyan"><span>Caixas distintas</span><strong><?= h($fmt($totals['caixas'])) ?></strong><small><?= h($fmt($totals['pastas_funcionais'])) ?> pastas funcionais</small></article>
-            <article class="kpi-card accent-green"><span>Disponíveis</span><strong><?= h($fmt($loan['disponiveis'] ?? 0)) ?></strong><small><?= h((string) $pct($loan['disponiveis'] ?? 0, $totals['itens'])) ?>% do acervo</small></article>
-            <article class="kpi-card accent-red"><span>Emprestados</span><strong><?= h($fmt($loan['emprestados'] ?? 0)) ?></strong><small>Itens com saída registrada</small></article>
+            <article class="kpi-card accent-green"><span>DisponÃ­veis</span><strong><?= h($fmt($loan['disponiveis'] ?? 0)) ?></strong><small><?= h((string) $pct($loan['disponiveis'] ?? 0, $totals['itens'])) ?>% do acervo</small></article>
+            <article class="kpi-card accent-red"><span>Emprestados</span><strong><?= h($fmt($loan['emprestados'] ?? 0)) ?></strong><small>Itens com saÃ­da registrada</small></article>
         </div>
 
         <div class="dashboard-grid">
             <section class="dashboard-card quality-card">
                 <div class="dashboard-card-head">
-                    <div><span class="eyebrow">Qualidade dos dados</span><h3>Pendências de cadastro</h3></div>
+                    <div><span class="eyebrow">Qualidade dos dados</span><h3>PendÃªncias de cadastro</h3></div>
                     <a class="mini-link" href="/?page=rel_temporalidade">Ver temporalidade</a>
                 </div>
                 <div class="quality-list">
@@ -1025,7 +1025,7 @@ function render_dashboard(): void
 
             <section class="dashboard-card">
                 <div class="dashboard-card-head">
-                    <div><span class="eyebrow">Origem</span><h3>Composição do acervo</h3></div>
+                    <div><span class="eyebrow">Origem</span><h3>ComposiÃ§Ã£o do acervo</h3></div>
                 </div>
                 <div class="donut-wrap">
                     <?php $manualPct = $pct($manualCount, $totals['itens']); ?>
@@ -1033,7 +1033,7 @@ function render_dashboard(): void
                     <div class="source-split">
                         <div><span>Importados</span><strong><?= h($fmt($importCount)) ?></strong></div>
                         <div><span>Manuais</span><strong><?= h($fmt($manualCount)) ?></strong></div>
-                        <div><span>Usuários</span><strong><?= h($fmt($totals['usuarios'])) ?></strong></div>
+                        <div><span>UsuÃ¡rios</span><strong><?= h($fmt($totals['usuarios'])) ?></strong></div>
                     </div>
                 </div>
             </section>
@@ -1060,7 +1060,7 @@ function render_dashboard(): void
 
             <section class="dashboard-card wide">
                 <div class="dashboard-card-head">
-                    <div><span class="eyebrow">Localização</span><h3>Blocos e endereços com mais caixas</h3></div>
+                    <div><span class="eyebrow">LocalizaÃ§Ã£o</span><h3>Blocos e endereÃ§os com mais caixas</h3></div>
                 </div>
                 <div class="rank-list">
                     <?php foreach ($topLocations as $row): ?>
@@ -1105,17 +1105,17 @@ function render_dashboard(): void
 
             <section class="dashboard-card wide">
                 <div class="dashboard-card-head">
-                    <div><span class="eyebrow">Movimentação</span><h3>Últimas alterações</h3></div>
+                    <div><span class="eyebrow">MovimentaÃ§Ã£o</span><h3>Ãšltimas alteraÃ§Ãµes</h3></div>
                 </div>
                 <?php if (!$recent): ?>
-                    <div class="empty-state">Nenhuma alteração recente registrada.</div>
+                    <div class="empty-state">Nenhuma alteraÃ§Ã£o recente registrada.</div>
                 <?php else: ?>
                     <div class="activity-list">
                         <?php foreach ($recent as $row): ?>
                             <article>
                                 <strong>CX <?= h($row['CAIXA'] ?: '---') ?></strong>
-                                <span><?= h($row['ASSUNTO'] ?: $row['PROCESSO'] ?: 'Sem descrição') ?></span>
-                                <em><?= h($row['LOCALIZACAO'] ?: 'Sem localização') ?> · <?= h($row['ALTERADO_POR'] ?: '---') ?> · <?= h($row['ULTIMA_ALTERACAO']) ?></em>
+                                <span><?= h($row['ASSUNTO'] ?: $row['PROCESSO'] ?: 'Sem descriÃ§Ã£o') ?></span>
+                                <em><?= h($row['LOCALIZACAO'] ?: 'Sem localizaÃ§Ã£o') ?> Â· <?= h($row['ALTERADO_POR'] ?: '---') ?> Â· <?= h($row['ULTIMA_ALTERACAO']) ?></em>
                             </article>
                         <?php endforeach; ?>
                     </div>
@@ -1134,9 +1134,9 @@ function render_diagnostico(): void
     <section class="dashboard-page">
         <div class="dashboard-hero">
             <div>
-                <span class="eyebrow">Diagnóstico de Conexão</span>
+                <span class="eyebrow">DiagnÃ³stico de ConexÃ£o</span>
                 <h2>Status do sistema</h2>
-                <p>Ambiente, banco, Supabase, jobs, eventos e validação das planilhas em um único lugar.</p>
+                <p>Ambiente, banco, Supabase, jobs, eventos e validaÃ§Ã£o das planilhas em um Ãºnico lugar.</p>
             </div>
             <div class="dashboard-actions">
                 <form method="post" data-loading-label="Sincronizando...">
@@ -1144,35 +1144,35 @@ function render_diagnostico(): void
                     <input type="hidden" name="return_page" value="diagnostico">
                     <button class="primary" type="submit">Sincronizar agora</button>
                 </form>
-                <a class="button" href="/?page=preview_export">Prévia de exportação</a>
+                <a class="button" href="/?page=preview_export">PrÃ©via de exportaÃ§Ã£o</a>
             </div>
         </div>
         <div class="dashboard-kpis">
             <article class="kpi-card accent-blue"><span>Modo</span><strong><?= h($snapshot['railway'] ? 'Railway' : 'Local') ?></strong><small><?= h($snapshot['modo']) ?></small></article>
             <article class="kpi-card accent-cyan"><span>Supabase</span><strong><?= h(supabase_enabled() ? 'ON' : 'OFF') ?></strong><small><?= h($snapshot['supabase']) ?></small></article>
-            <article class="kpi-card accent-green"><span>Busca FTS</span><strong><?= h($snapshot['fts'] ? 'Ativa' : 'LIKE') ?></strong><small>Índice textual inteligente</small></article>
+            <article class="kpi-card accent-green"><span>Busca FTS</span><strong><?= h($snapshot['fts'] ? 'Ativa' : 'LIKE') ?></strong><small>Ãndice textual inteligente</small></article>
             <article class="kpi-card accent-red"><span>Banco</span><strong><?= h(number_format((int) $snapshot['db_size'] / 1024 / 1024, 1, ',', '.')) ?> MB</strong><small><?= h($snapshot['db_path']) ?></small></article>
         </div>
         <div class="dashboard-grid">
             <section class="dashboard-card">
-                <div class="dashboard-card-head"><div><span class="eyebrow">Jobs</span><h3>Importações recentes</h3></div></div>
+                <div class="dashboard-card-head"><div><span class="eyebrow">Jobs</span><h3>ImportaÃ§Ãµes recentes</h3></div></div>
                 <div class="activity-list">
-                    <?php foreach ($snapshot['jobs'] as $job): ?><article><strong><?= h($job['status']) ?></strong><span><?= h($job['tipo']) ?> · <?= h((string) $job['total_registros']) ?> registro(s)</span><em><?= h($job['mensagem']) ?> · <?= h($job['concluido_em'] ?: $job['criado_em']) ?></em></article><?php endforeach; ?>
+                    <?php foreach ($snapshot['jobs'] as $job): ?><article><strong><?= h($job['status']) ?></strong><span><?= h($job['tipo']) ?> Â· <?= h((string) $job['total_registros']) ?> registro(s)</span><em><?= h($job['mensagem']) ?> Â· <?= h($job['concluido_em'] ?: $job['criado_em']) ?></em></article><?php endforeach; ?>
                 </div>
             </section>
             <section class="dashboard-card">
-                <div class="dashboard-card-head"><div><span class="eyebrow">Eventos</span><h3>Timeline técnica</h3></div></div>
+                <div class="dashboard-card-head"><div><span class="eyebrow">Eventos</span><h3>Timeline tÃ©cnica</h3></div></div>
                 <div class="activity-list">
                     <?php foreach ($snapshot['eventos'] as $event): ?><article><strong><?= h($event['tipo']) ?></strong><span><?= h($event['mensagem']) ?></span><em><?= h($event['criado_em']) ?></em></article><?php endforeach; ?>
                 </div>
             </section>
             <section class="dashboard-card wide">
-                <div class="dashboard-card-head"><div><span class="eyebrow">Planilhas</span><h3>Validação de abas</h3></div></div>
+                <div class="dashboard-card-head"><div><span class="eyebrow">Planilhas</span><h3>ValidaÃ§Ã£o de abas</h3></div></div>
                 <div class="activity-list">
                     <?php foreach ($validations as $file): ?>
                         <article>
                             <strong><?= h($file['arquivo']) ?></strong>
-                            <span><?= h((string) count($file['abas'])) ?> aba(s) · <?= h($file['status']) ?></span>
+                            <span><?= h((string) count($file['abas'])) ?> aba(s) Â· <?= h($file['status']) ?></span>
                             <em><?= h(implode(', ', array_map(fn ($sheet) => $sheet['nome'] . ' (' . $sheet['formato'] . ')', array_slice($file['abas'], 0, 8)))) ?><?= count($file['abas']) > 8 ? '...' : '' ?></em>
                         </article>
                     <?php endforeach; ?>
@@ -1196,6 +1196,7 @@ function render_mapa_acervo(): void
         'prateleiras' => 10,
         'capacidade_por_prateleira' => 7,
         'caixas_ocupadas' => 0,
+        'cor_setor' => '#0ea5e9',
         'observacao' => '',
     ];
     ?>
@@ -1219,6 +1220,10 @@ function render_mapa_acervo(): void
             <article class="kpi-card accent-green"><span>Capacidade</span><strong><?= h(number_format((int) $resumo['capacidade'], 0, ',', '.')) ?></strong><small>caixas no total</small></article>
             <article class="kpi-card accent-red"><span>Espacos vazios</span><strong><?= h(number_format((int) $resumo['livres'], 0, ',', '.')) ?></strong><small><?= h(number_format((int) $resumo['ocupadas'], 0, ',', '.')) ?> ocupadas</small></article>
         </div>
+
+        <?php if ($rows): ?>
+            <?php render_mapa_acervo_inteligencia($rows, $resumo); ?>
+        <?php endif; ?>
 
         <section class="mapa-editor-grid">
             <form method="post" class="panel mapa-form" autocomplete="off">
@@ -1252,6 +1257,12 @@ function render_mapa_acervo(): void
                     </label>
                     <label>Caixas ocupadas
                         <input name="caixas_ocupadas" type="number" min="0" value="<?= h((string) ($editing['caixas_ocupadas'] ?? 0)) ?>" required>
+                    </label>
+                    <label class="mapa-color-field">Cor do setor
+                        <span>
+                            <input name="cor_setor" type="color" value="<?= h((string) ($editing['cor_setor'] ?? '#0ea5e9')) ?>">
+                            <b><?= h((string) ($editing['cor_setor'] ?? '#0ea5e9')) ?></b>
+                        </span>
                     </label>
                     <label class="wide">Observacao
                         <input name="observacao" value="<?= h($editing['observacao'] ?? '') ?>" placeholder="Ex: corredor, restricao, caixas avulsas...">
@@ -1290,6 +1301,7 @@ function render_mapa_acervo(): void
                             <strong><?= h((string) $livresSala) ?> espacos vazios</strong>
                             <span><?= h((string) $ocupadasSala) ?>/<?= h((string) $capacidadeSala) ?> caixas</span>
                         </div>
+                        <?php render_mapa_planta_sala((string) $sala, $items); ?>
                         <div class="mapa-estrutura-grid">
                             <?php foreach ($items as $item): render_mapa_estrutura($item); endforeach; ?>
                         </div>
@@ -1298,6 +1310,111 @@ function render_mapa_acervo(): void
             </div>
         <?php endif; ?>
     </section>
+    <?php
+}
+
+function render_mapa_acervo_inteligencia(array $rows, array $resumo): void
+{
+    $best = null;
+    $critical = [];
+
+    foreach ($rows as $row) {
+        $total = mapa_acervo_capacidade_total($row);
+        $ocupadas = max(0, (int) ($row['caixas_ocupadas'] ?? 0));
+        $livres = max(0, $total - $ocupadas);
+        $percent = $total > 0 ? (int) round(($ocupadas / $total) * 100) : 0;
+
+        if ($livres > 0 && (!$best || $livres > $best['livres'])) {
+            $best = [
+                'sala' => (string) ($row['sala'] ?? ''),
+                'numero' => (string) ($row['numero'] ?? ''),
+                'tipo' => mapa_acervo_tipo_label((string) ($row['tipo'] ?? '')),
+                'livres' => $livres,
+                'percent' => $percent,
+            ];
+        }
+
+        if ($percent >= 90) {
+            $critical[] = [
+                'sala' => (string) ($row['sala'] ?? ''),
+                'numero' => (string) ($row['numero'] ?? ''),
+                'percent' => $percent,
+            ];
+        }
+    }
+
+    usort($critical, fn ($a, $b) => $b['percent'] <=> $a['percent']);
+    $ocupacaoGeral = ((int) ($resumo['capacidade'] ?? 0)) > 0
+        ? (int) round((((int) ($resumo['ocupadas'] ?? 0)) / ((int) $resumo['capacidade'])) * 100)
+        : 0;
+    ?>
+    <section class="mapa-command-panel">
+        <article>
+            <span class="eyebrow">Rota sugerida</span>
+            <?php if ($best): ?>
+                <strong>Sala <?= h($best['sala']) ?>, <?= h($best['tipo']) ?> <?= h($best['numero']) ?></strong>
+                <p>Melhor ponto para receber novas caixas agora: <?= h((string) $best['livres']) ?> espacos livres e <?= h((string) $best['percent']) ?>% de ocupacao.</p>
+            <?php else: ?>
+                <strong>Sem vaga livre</strong>
+                <p>Todas as estruturas cadastradas estao no limite. Vale planejar expansao ou remanejamento.</p>
+            <?php endif; ?>
+        </article>
+        <article>
+            <span class="eyebrow">Pressao do acervo</span>
+            <strong><?= h((string) $ocupacaoGeral) ?>% ocupado</strong>
+            <p><?= h(number_format((int) ($resumo['livres'] ?? 0), 0, ',', '.')) ?> espacos ainda disponiveis no mapa cadastrado.</p>
+        </article>
+        <article>
+            <span class="eyebrow">Alerta</span>
+            <?php if ($critical): ?>
+                <strong><?= h((string) count($critical)) ?> estrutura(s) acima de 90%</strong>
+                <p>Mais critica: sala <?= h($critical[0]['sala']) ?>, n. <?= h($critical[0]['numero']) ?> com <?= h((string) $critical[0]['percent']) ?>%.</p>
+            <?php else: ?>
+                <strong>Sem gargalo critico</strong>
+                <p>Nenhuma estrutura passou de 90% de ocupacao. O fluxo esta respirando.</p>
+            <?php endif; ?>
+        </article>
+    </section>
+    <?php
+}
+
+function render_mapa_planta_sala(string $sala, array $items): void
+{
+    $maxCapacidade = max(array_map('mapa_acervo_capacidade_total', $items) ?: [1]);
+    ?>
+    <div class="mapa-planta" aria-label="Planta visual da sala <?= h($sala) ?>">
+        <div class="mapa-planta-corredor">
+            <span>Entrada</span>
+            <i></i>
+            <span>Corredor de consulta</span>
+        </div>
+        <div class="mapa-planta-grid">
+            <?php foreach ($items as $item): ?>
+                <?php
+                $total = mapa_acervo_capacidade_total($item);
+                $ocupadas = max(0, (int) ($item['caixas_ocupadas'] ?? 0));
+                $livres = max(0, $total - $ocupadas);
+                $percent = $total > 0 ? min(100, (int) round(($ocupadas / $total) * 100)) : 0;
+                $status = $percent >= 95 ? 'is-full' : ($percent >= 75 ? 'is-alert' : 'is-open');
+                $span = min(3, max(1, (int) ceil(($total / max(1, $maxCapacidade)) * 3)));
+                $corSetor = mapa_acervo_cor_setor($item);
+                ?>
+                <a class="mapa-planta-bloco <?= h($status) ?> <?= h((string) ($item['tipo'] ?? '')) ?>"
+                   style="--fill: <?= h((string) $percent) ?>%; --span: <?= h((string) $span) ?>; --sector: <?= h($corSetor) ?>"
+                   href="/?page=mapa_acervo&edit_mapa=<?= h((string) ($item['id'] ?? 0)) ?>"
+                   title="<?= h(mapa_acervo_tipo_label((string) ($item['tipo'] ?? '')) . ' ' . (string) ($item['numero'] ?? '') . ': ' . $ocupadas . '/' . $total . ' caixas') ?>">
+                    <span><?= h(mapa_acervo_tipo_label((string) ($item['tipo'] ?? ''))) ?></span>
+                    <strong>N. <?= h((string) ($item['numero'] ?? '')) ?></strong>
+                    <em><?= h((string) $livres) ?> livres</em>
+                </a>
+            <?php endforeach; ?>
+        </div>
+        <div class="mapa-planta-legenda">
+            <span><i class="is-open"></i>Ate 74%</span>
+            <span><i class="is-alert"></i>75% a 94%</span>
+            <span><i class="is-full"></i>95% ou mais</span>
+        </div>
+    </div>
     <?php
 }
 
@@ -1310,12 +1427,13 @@ function render_mapa_estrutura(array $item): void
     $livres = max(0, $total - $ocupadas);
     $percent = $total > 0 ? min(100, round(($ocupadas / $total) * 100)) : 0;
     $restante = $ocupadas;
+    $corSetor = mapa_acervo_cor_setor($item);
     ?>
-    <article class="mapa-estrutura <?= h((string) ($item['tipo'] ?? '')) ?>">
+    <article class="mapa-estrutura <?= h((string) ($item['tipo'] ?? '')) ?>" style="--sector: <?= h($corSetor) ?>">
         <div class="mapa-estrutura-head">
             <div>
                 <span><?= h(mapa_acervo_tipo_label((string) ($item['tipo'] ?? ''))) ?></span>
-                <strong>N. <?= h($item['numero'] ?? '') ?></strong>
+                <strong><i class="mapa-sector-dot"></i>N. <?= h($item['numero'] ?? '') ?></strong>
             </div>
             <div class="mapa-estrutura-actions">
                 <a class="mini-link" href="/?page=mapa_acervo&edit_mapa=<?= h((string) ($item['id'] ?? 0)) ?>">Editar</a>
@@ -1359,6 +1477,12 @@ function render_mapa_estrutura(array $item): void
     <?php
 }
 
+function mapa_acervo_cor_setor(array $item): string
+{
+    $cor = trim((string) ($item['cor_setor'] ?? '#0ea5e9'));
+    return preg_match('/^#[0-9a-fA-F]{6}$/', $cor) ? strtolower($cor) : '#0ea5e9';
+}
+
 function render_mapa_acervo_legacy(): void
 {
     $rows = acervo_map_data(30);
@@ -1366,7 +1490,7 @@ function render_mapa_acervo_legacy(): void
     ?>
     <section class="dashboard-page">
         <div class="dashboard-hero">
-            <div><span class="eyebrow">Mapa do Acervo</span><h2>Distribuição por localização</h2><p>Um mapa operacional dos locais com maior concentração de caixas e itens.</p></div>
+            <div><span class="eyebrow">Mapa do Acervo</span><h2>DistribuiÃ§Ã£o por localizaÃ§Ã£o</h2><p>Um mapa operacional dos locais com maior concentraÃ§Ã£o de caixas e itens.</p></div>
         </div>
         <div class="dashboard-grid">
             <section class="dashboard-card wide">
@@ -1374,7 +1498,7 @@ function render_mapa_acervo_legacy(): void
                     <?php foreach ($rows as $row): ?>
                         <a class="rank-row" href="/?page=busca&localizacao=<?= h(urlencode($row['localizacao'])) ?>">
                             <span><?= h($row['localizacao']) ?></span>
-                            <strong><?= h((string) $row['caixas']) ?> caixas · <?= h((string) $row['itens']) ?> itens</strong>
+                            <strong><?= h((string) $row['caixas']) ?> caixas Â· <?= h((string) $row['itens']) ?> itens</strong>
                             <i style="--w: <?= h((string) ($max ? max(4, round(((int) $row['caixas'] / $max) * 100)) : 0)) ?>%"></i>
                         </a>
                     <?php endforeach; ?>
@@ -1397,13 +1521,13 @@ function render_export_preview(): void
     ?>
     <section class="panel">
         <div class="dashboard-card-head">
-            <div><span class="eyebrow">Prévia de Exportação</span><h3>Relatório geral do acervo</h3></div>
+            <div><span class="eyebrow">PrÃ©via de ExportaÃ§Ã£o</span><h3>RelatÃ³rio geral do acervo</h3></div>
             <a class="button primary" href="/?export=acervo">Baixar Excel</a>
         </div>
-        <p class="muted">O arquivo completo terá <?= h(number_format($total, 0, ',', '.')) ?> registro(s). Abaixo estão os primeiros 25 para conferência.</p>
+        <p class="muted">O arquivo completo terÃ¡ <?= h(number_format($total, 0, ',', '.')) ?> registro(s). Abaixo estÃ£o os primeiros 25 para conferÃªncia.</p>
         <div class="table-wrap">
             <table class="cadastros-table">
-                <thead><tr><th>Caixa</th><th>Processo</th><th>Interessado</th><th>Assunto</th><th>Localização</th><th>Temporalidade</th></tr></thead>
+                <thead><tr><th>Caixa</th><th>Processo</th><th>Interessado</th><th>Assunto</th><th>LocalizaÃ§Ã£o</th><th>Temporalidade</th></tr></thead>
                 <tbody>
                     <?php foreach ($rows as $row): ?><tr><td><?= h($row['CAIXA']) ?></td><td><?= h($row['PROCESSO']) ?></td><td><?= h($row['INTERESSADO']) ?></td><td><?= h($row['ASSUNTO']) ?></td><td><?= h($row['LOCALIZACAO']) ?></td><td><?= h($row['TEMPORALIDADE']) ?></td></tr><?php endforeach; ?>
                 </tbody>
@@ -1740,7 +1864,7 @@ function render_assistente(): void
             <div>
                 <span class="eyebrow">Assistente Virtual</span>
                 <h2>Central Inteligente DIARQ</h2>
-                <p>Use para consultar a história dos manuais, conferir acontecimentos e fazer perguntas sobre caixas, blocos e registros do acervo.</p>
+                <p>Use para consultar a histÃ³ria dos manuais, conferir acontecimentos e fazer perguntas sobre caixas, blocos e registros do acervo.</p>
             </div>
             <div class="assistant-status <?= $assistantReady ? 'online' : 'offline' ?>">
                 <span></span>
@@ -1751,11 +1875,11 @@ function render_assistente(): void
         <div class="assistant-shell">
             <aside class="assistant-panel">
                 <div class="assistant-panel-block">
-                    <strong>Atalhos rápidos</strong>
-                    <button type="button" data-chat-prompt="Quando foi a enchente da 511?">História da 511</button>
+                    <strong>Atalhos rÃ¡pidos</strong>
+                    <button type="button" data-chat-prompt="Quando foi a enchente da 511?">HistÃ³ria da 511</button>
                     <button type="button" data-chat-prompt="Quantas caixas da ARCEM tem no Bloco A?">Contar caixas</button>
                     <button type="button" data-chat-prompt="Pesquise nos manuais como devo procurar documentos da SOS DOCS.">Pesquisar nos manuais</button>
-                    <button type="button" data-chat-prompt="Me ajude a escrever uma resposta profissional sobre a localização de uma caixa no acervo.">Resposta profissional</button>
+                    <button type="button" data-chat-prompt="Me ajude a escrever uma resposta profissional sobre a localizaÃ§Ã£o de uma caixa no acervo.">Resposta profissional</button>
                 </div>
                 <div class="assistant-panel-block compact">
                     <span>Modelo</span>
@@ -1768,7 +1892,7 @@ function render_assistente(): void
                 <div id="chat-log" class="chat-log" aria-live="polite">
                     <div class="chat-msg assistant">
                         <strong>Assistente DIARQ</strong>
-                        <span>Olá. Agora posso consultar os manuais e o banco do acervo para responder sobre acontecimentos, caixas, localizações e procedimentos.</span>
+                        <span>OlÃ¡. Agora posso consultar os manuais e o banco do acervo para responder sobre acontecimentos, caixas, localizaÃ§Ãµes e procedimentos.</span>
                     </div>
                 </div>
                 <form id="chat-form" class="chat-form">
@@ -1776,7 +1900,7 @@ function render_assistente(): void
                     <button class="primary" type="submit">Enviar</button>
                 </form>
                 <?php if (!$assistantReady): ?>
-                    <p class="assistant-footnote">OPENAI_API_KEY não configurada neste servidor.</p>
+                    <p class="assistant-footnote">OPENAI_API_KEY nÃ£o configurada neste servidor.</p>
                 <?php endif; ?>
             </div>
         </div>

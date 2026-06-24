@@ -193,6 +193,7 @@ function migrate_db(PDO $pdo): void
             prateleiras INTEGER NOT NULL DEFAULT 1,
             capacidade_por_prateleira INTEGER NOT NULL DEFAULT 1,
             caixas_ocupadas INTEGER NOT NULL DEFAULT 0,
+            cor_setor TEXT NOT NULL DEFAULT '#0ea5e9',
             observacao TEXT NOT NULL DEFAULT '',
             criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -206,6 +207,7 @@ function migrate_db(PDO $pdo): void
         'prateleiras' => "INTEGER NOT NULL DEFAULT 1",
         'capacidade_por_prateleira' => "INTEGER NOT NULL DEFAULT 1",
         'caixas_ocupadas' => "INTEGER NOT NULL DEFAULT 0",
+        'cor_setor' => "TEXT NOT NULL DEFAULT '#0ea5e9'",
         'observacao' => "TEXT NOT NULL DEFAULT ''",
         'criado_em' => "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
         'atualizado_em' => "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",

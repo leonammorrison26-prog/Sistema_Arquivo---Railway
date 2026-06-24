@@ -189,6 +189,15 @@ document.querySelectorAll('.temp-code-link').forEach((button) => {
     });
 });
 
+document.querySelectorAll('.mapa-color-field input[type="color"]').forEach((input) => {
+    const output = input.closest('.mapa-color-field')?.querySelector('b');
+    const syncColor = () => {
+        if (output) output.textContent = input.value.toUpperCase();
+    };
+    input.addEventListener('input', syncColor);
+    syncColor();
+});
+
 const indicadorForm = document.querySelector('[data-indicador-form]');
 if (indicadorForm) {
     const inputs = Array.from(indicadorForm.querySelectorAll('[data-indicador-input]'));

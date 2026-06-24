@@ -564,6 +564,7 @@ function save_mapa_posicao(): void
     $prateleiras = max(1, (int) ($_POST['prateleiras'] ?? 1));
     $capacidade = max(1, (int) ($_POST['capacidade_por_prateleira'] ?? 1));
     $caixas = max(0, (int) ($_POST['caixas_ocupadas'] ?? 0));
+    $corSetor = trim((string) ($_POST['cor_setor'] ?? '#0ea5e9'));
     $observacao = trim((string) ($_POST['observacao'] ?? ''));
 
     if ($sala === '') {
@@ -574,6 +575,9 @@ function save_mapa_posicao(): void
     }
     if ($numero === '') {
         throw new RuntimeException('Informe o numero da estante ou modulo.');
+    }
+    if (!preg_match('/^#[0-9a-fA-F]{6}$/', $corSetor)) {
+        $corSetor = '#0ea5e9';
     }
 
     $total = $prateleiras * $capacidade;
@@ -588,6 +592,7 @@ function save_mapa_posicao(): void
         ':prateleiras' => $prateleiras,
         ':capacidade_por_prateleira' => $capacidade,
         ':caixas_ocupadas' => $caixas,
+        ':cor_setor' => strtolower($corSetor),
         ':observacao' => $observacao,
         ':atualizado_em' => date('Y-m-d H:i:s'),
     ];
@@ -602,6 +607,7 @@ function save_mapa_posicao(): void
                 prateleiras = :prateleiras,
                 capacidade_por_prateleira = :capacidade_por_prateleira,
                 caixas_ocupadas = :caixas_ocupadas,
+                cor_setor = :cor_setor,
                 observacao = :observacao,
                 atualizado_em = :atualizado_em
             WHERE id = :id
@@ -613,9 +619,9 @@ function save_mapa_posicao(): void
 
     db()->prepare("
         INSERT INTO acervo_mapa_posicoes
-            (sala, tipo, numero, prateleiras, capacidade_por_prateleira, caixas_ocupadas, observacao, criado_em, atualizado_em)
+            (sala, tipo, numero, prateleiras, capacidade_por_prateleira, caixas_ocupadas, cor_setor, observacao, criado_em, atualizado_em)
         VALUES
-            (:sala, :tipo, :numero, :prateleiras, :capacidade_por_prateleira, :caixas_ocupadas, :observacao, :atualizado_em, :atualizado_em)
+            (:sala, :tipo, :numero, :prateleiras, :capacidade_por_prateleira, :caixas_ocupadas, :cor_setor, :observacao, :atualizado_em, :atualizado_em)
     ")->execute($params);
     $_SESSION['flash_success'] = 'Posicao adicionada ao mapa.';
     system_event('mapa_acervo_criado', 'Posicao fisica criada', ['sala' => $sala, 'numero' => $numero]);

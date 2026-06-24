@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
 :root {
     --primary-color: #004595;
     --bg: #0f172a;
@@ -11,6 +13,455 @@
     --sidebar-width: clamp(280px, 22vw, 350px);
     --sidebar-collapsed-width: 78px;
     --content-max: 1480px;
+    --app-font: "Inter", "Segoe UI", Roboto, Arial, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.mapa-acervo-page {
+    display: grid;
+    gap: 18px;
+}
+
+.mapa-editor-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(280px, .8fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.mapa-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.mapa-form-grid .wide {
+    grid-column: 1 / -1;
+}
+
+.mapa-form-grid label {
+    display: grid;
+    gap: 6px;
+    color: var(--muted);
+    font-size: .78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.mapa-form-grid input,
+.mapa-form-grid select {
+    width: 100%;
+    min-width: 0;
+}
+
+.mapa-color-field span {
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr);
+    gap: 8px;
+    align-items: center;
+}
+
+.mapa-color-field input[type="color"] {
+    width: 46px;
+    height: 38px;
+    padding: 3px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.mapa-color-field b {
+    display: block;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: .82rem;
+    text-transform: uppercase;
+    background: rgba(255, 255, 255, .05);
+}
+
+.mapa-help p {
+    color: var(--muted);
+    line-height: 1.55;
+}
+
+.mapa-command-panel {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.mapa-command-panel article {
+    position: relative;
+    overflow: hidden;
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid rgba(14, 165, 233, .2);
+    border-radius: 10px;
+    background:
+        linear-gradient(135deg, rgba(14, 165, 233, .16), transparent 42%),
+        rgba(255, 255, 255, .055);
+}
+
+.mapa-command-panel article::after {
+    content: "";
+    position: absolute;
+    inset: auto 14px 12px 14px;
+    height: 3px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #22c55e, #0ea5e9, #f59e0b);
+    opacity: .7;
+}
+
+.mapa-command-panel strong {
+    display: block;
+    margin-top: 6px;
+    font-size: 1.05rem;
+}
+
+.mapa-command-panel p {
+    margin: 8px 0 12px;
+    color: var(--muted);
+    line-height: 1.45;
+}
+
+.mapa-salas {
+    display: grid;
+    gap: 18px;
+}
+
+.mapa-sala {
+    display: grid;
+    gap: 14px;
+}
+
+.mapa-sala-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    align-items: end;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border: 1px solid rgba(20, 120, 184, .16);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .05);
+}
+
+.mapa-sala-head h3 {
+    margin: 0;
+    font-size: 1.35rem;
+}
+
+.mapa-sala-head strong {
+    color: var(--success);
+}
+
+.mapa-sala-head > span {
+    color: var(--muted);
+    font-size: .86rem;
+}
+
+.mapa-planta {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid rgba(148, 163, 184, .18);
+    border-radius: 10px;
+    background:
+        linear-gradient(90deg, rgba(255, 255, 255, .045) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(255, 255, 255, .045) 1px, transparent 1px),
+        rgba(15, 23, 42, .18);
+    background-size: 28px 28px;
+}
+
+.mapa-planta-corredor {
+    display: grid;
+    grid-template-columns: auto minmax(80px, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    color: var(--muted);
+    font-size: .74rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.mapa-planta-corredor i {
+    height: 10px;
+    border-radius: 999px;
+    background:
+        repeating-linear-gradient(90deg, rgba(148, 163, 184, .55) 0 12px, transparent 12px 22px),
+        rgba(148, 163, 184, .12);
+}
+
+.mapa-planta-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(92px, 1fr));
+    gap: 10px;
+    align-items: stretch;
+}
+
+.mapa-planta-bloco {
+    position: relative;
+    display: grid;
+    gap: 4px;
+    grid-column: span var(--span);
+    min-height: 88px;
+    min-width: 0;
+    overflow: hidden;
+    padding: 12px;
+    border: 1px solid rgba(148, 163, 184, .26);
+    border-radius: 8px;
+    text-decoration: none;
+    background: rgba(15, 23, 42, .42);
+    isolation: isolate;
+}
+
+.mapa-planta-bloco::before {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    height: var(--fill);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--sector) 14%, transparent), color-mix(in srgb, var(--sector) 58%, transparent));
+    z-index: -1;
+}
+
+.mapa-planta-bloco.estante::before {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--sector) 14%, transparent), color-mix(in srgb, var(--sector) 58%, transparent));
+}
+
+.mapa-planta-bloco.is-alert::before {
+    background: linear-gradient(180deg, rgba(245, 158, 11, .14), rgba(245, 158, 11, .58));
+}
+
+.mapa-planta-bloco.is-full::before {
+    background: linear-gradient(180deg, rgba(220, 38, 38, .14), rgba(220, 38, 38, .62));
+}
+
+.mapa-planta-bloco:hover {
+    transform: translateY(-1px);
+    border-color: rgba(255, 255, 255, .42);
+}
+
+.mapa-planta-bloco span,
+.mapa-planta-bloco em {
+    color: var(--muted);
+    font-size: .72rem;
+    font-style: normal;
+    text-transform: uppercase;
+}
+
+.mapa-planta-bloco strong {
+    font-size: 1.12rem;
+}
+
+.mapa-planta-legenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    color: var(--muted);
+    font-size: .76rem;
+}
+
+.mapa-planta-legenda span {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.mapa-planta-legenda i {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    background: #0ea5e9;
+}
+
+.mapa-planta-legenda i.is-alert {
+    background: #f59e0b;
+}
+
+.mapa-planta-legenda i.is-full {
+    background: #dc2626;
+}
+
+.mapa-estrutura-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 14px;
+}
+
+.mapa-estrutura {
+    --sector: #0ea5e9;
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid color-mix(in srgb, var(--sector) 42%, rgba(255, 255, 255, .12));
+    border-radius: 10px;
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--sector) 14%, transparent), transparent 38%),
+        rgba(255, 255, 255, .06);
+}
+
+.mapa-estrutura.estante {
+    border-color: color-mix(in srgb, var(--sector) 46%, rgba(255, 255, 255, .14));
+}
+
+.mapa-estrutura.modulo_deslizante {
+    border-color: color-mix(in srgb, var(--sector) 46%, rgba(255, 255, 255, .14));
+}
+
+.mapa-estrutura-head,
+.mapa-estrutura-actions,
+.mapa-estrutura-stats {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.mapa-estrutura-head span {
+    display: block;
+    color: var(--muted);
+    font-size: .76rem;
+    text-transform: uppercase;
+}
+
+.mapa-estrutura-head strong {
+    display: inline-flex;
+    gap: 7px;
+    align-items: center;
+    font-size: 1.08rem;
+}
+
+.mapa-sector-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 4px;
+    background: var(--sector);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--sector) 18%, transparent);
+}
+
+.mapa-estrutura-actions form {
+    margin: 0;
+}
+
+.mapa-estrutura-actions button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--danger);
+    font: inherit;
+    font-size: .78rem;
+    cursor: pointer;
+}
+
+.mapa-meter {
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, .22);
+}
+
+.mapa-meter span {
+    display: block;
+    width: var(--w);
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--sector) 68%, #22c55e), var(--sector));
+}
+
+.mapa-estrutura-stats {
+    flex-wrap: wrap;
+    color: var(--muted);
+    font-size: .78rem;
+}
+
+.mapa-prateleiras {
+    display: grid;
+    gap: 6px;
+}
+
+.mapa-prateleira {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 8px;
+    align-items: center;
+}
+
+.mapa-prateleira > span {
+    color: var(--muted);
+    font-size: .72rem;
+    font-weight: 800;
+}
+
+.mapa-caixas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-width: 0;
+    padding: 5px;
+    border-radius: 7px;
+    background: rgba(15, 23, 42, .12);
+}
+
+.mapa-caixas i {
+    width: 13px;
+    height: 13px;
+    border-radius: 3px;
+    border: 1px solid rgba(148, 163, 184, .45);
+}
+
+.mapa-caixas i.filled {
+    border-color: color-mix(in srgb, var(--sector) 78%, white);
+    background: var(--sector);
+}
+
+.mapa-caixas i.empty {
+    background: transparent;
+}
+
+.mapa-caixas em {
+    position: relative;
+    display: block;
+    flex: 1 1 120px;
+    height: 14px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, .22);
+}
+
+.mapa-caixas em b {
+    display: block;
+    width: var(--w);
+    height: 100%;
+    background: var(--sector);
+}
+
+.mapa-caixas small,
+.mapa-observacao {
+    color: var(--muted);
+    font-size: .78rem;
+}
+
+.mapa-observacao {
+    margin: 0;
+    padding-top: 2px;
+}
+
+@media (max-width: 900px) {
+    .mapa-command-panel,
+    .mapa-editor-grid,
+    .mapa-form-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .mapa-planta-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .mapa-planta-bloco {
+        grid-column: span 1;
+    }
 }
 
 .mapa-acervo-page {
@@ -252,11 +703,18 @@
 * { box-sizing: border-box; }
 body {
     margin: 0;
-    font-family: Inter, "Segoe UI", Roboto, Arial, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--app-font);
     background: #0b0e14;
     color: var(--text);
     text-rendering: geometricPrecision;
     -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+    font-family: var(--app-font);
 }
 a { color: inherit; }
 .app-shell {
