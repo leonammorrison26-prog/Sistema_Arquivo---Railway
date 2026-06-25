@@ -1372,6 +1372,15 @@ a { color: inherit; }
     max-width: 38px;
     max-height: 31px;
 }
+.side-image-cgla {
+    background:
+        linear-gradient(135deg, rgba(14, 165, 233, .18), rgba(34, 197, 94, .12)),
+        rgba(255, 255, 255, .08);
+}
+.side-image-cgla img {
+    max-width: 40px;
+    max-height: 32px;
+}
 .side-image-conexao {
     background:
         linear-gradient(135deg, rgba(34, 197, 94, .18), rgba(14, 165, 233, .16)),

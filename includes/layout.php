@@ -264,6 +264,8 @@ function render_sidebar(): void
     $assistantLogo = is_file($assistantLogoPath) ? 'data:image/png;base64,' . base64_encode((string) file_get_contents($assistantLogoPath)) : '';
     $pastaCompLogoPath = ASSETS_DIR . DIRECTORY_SEPARATOR . 'LOGO_PastaComp.png';
     $pastaCompLogo = is_file($pastaCompLogoPath) ? 'data:image/png;base64,' . base64_encode((string) file_get_contents($pastaCompLogoPath)) : '';
+    $cglaLogoPath = ASSETS_DIR . DIRECTORY_SEPARATOR . 'LOGO-CGLA.png';
+    $cglaLogo = is_file($cglaLogoPath) ? 'data:image/png;base64,' . base64_encode((string) file_get_contents($cglaLogoPath)) : '';
     $conexaoLogoPath = ASSETS_DIR . DIRECTORY_SEPARATOR . 'LOGO - Conecxao .jpg';
     $conexaoLogo = is_file($conexaoLogoPath) ? 'data:image/jpeg;base64,' . base64_encode((string) file_get_contents($conexaoLogoPath)) : '';
     ?>
@@ -341,6 +343,10 @@ function render_sidebar(): void
                             <span class="sei-badge">sei!</span>
                         <?php endif; ?>
                         <span class="side-label">Abrir SEI - MDS</span>
+                    </a>
+                    <a class="side-button side-button-feature side-button-cgla" href="http://10.222.14.34:8008/auth/login" target="_blank" rel="noopener" title="Abrir Portal CGLA">
+                        <?= sidebar_image_icon($cglaLogo, 'CGLA', 'side-image-cgla') ?: side_icon('folder') ?>
+                        <span class="side-label">Abrir Portal CGLA</span>
                     </a>
                     <a class="side-button side-button-feature side-button-pasta" href="diarq://" title="Abrir Pasta Compart - Diarq">
                         <?= sidebar_image_icon($pastaCompLogo, 'Pasta Compart', 'side-image-pasta') ?: side_icon('folder') ?>
