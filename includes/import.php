@@ -49,7 +49,7 @@ function import_planilhas_on_login(bool $force = false): array
     allow_long_import_runtime($force ? 900 : 300);
 
     if (!is_dir(PLANILHAS_DIR)) {
-        return ['enabled' => false, 'imported' => 0, 'files' => 0, 'reason' => 'Pasta de planilhas nao encontrada.'];
+        return ['enabled' => false, 'imported' => 0, 'files' => 0, 'reason' => 'Pasta de planilhas não encontrada.'];
     }
 
     if (!class_exists(IOFactory::class)) {
@@ -60,7 +60,7 @@ function import_planilhas_on_login(bool $force = false): array
     }
 
     if (!class_exists(IOFactory::class)) {
-        return ['enabled' => false, 'imported' => 0, 'files' => 0, 'reason' => 'PhpSpreadsheet nao instalado no ambiente.'];
+        return ['enabled' => false, 'imported' => 0, 'files' => 0, 'reason' => 'PhpSpreadsheet não instalado no ambiente.'];
     }
 
     $files = planilha_import_files();
@@ -137,7 +137,7 @@ function clear_imported_planilha_rows(): void
     try {
         db()->exec('DELETE FROM acervo_fts');
     } catch (Throwable) {
-        // FTS pode nao existir em alguns ambientes.
+        // FTS pode não existir em alguns ambientes.
     }
 }
 

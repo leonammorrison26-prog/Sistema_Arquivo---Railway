@@ -63,8 +63,8 @@ if ($raw === false || $error) {
 
 $data = json_decode($raw, true);
 if ($status >= 400) {
-    $detail = $data['error']['message'] ?? 'Nao foi possivel consultar a API.';
-    echo json_encode(['reply' => 'Assistente indisponivel no momento: ' . $detail], JSON_UNESCAPED_UNICODE);
+    $detail = $data['error']['message'] ?? 'Não foi possível consultar a API.';
+    echo json_encode(['reply' => 'Assistente indisponível no momento: ' . $detail], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -74,7 +74,7 @@ if (!$reply && isset($data['output'][0]['content'][0]['text'])) {
     $reply = $data['output'][0]['content'][0]['text'];
 }
 
-$reply = $reply ?: 'Nao foi possivel interpretar a resposta da API.';
+$reply = $reply ?: 'Não foi possível interpretar a resposta da API.';
 db()->prepare('INSERT INTO assistant_memory (pergunta, resposta, contexto_json) VALUES (:pergunta, :resposta, :contexto)')
     ->execute([
         ':pergunta' => $message,

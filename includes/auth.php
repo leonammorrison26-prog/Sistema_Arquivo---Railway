@@ -75,7 +75,7 @@ function change_logged_user_password(string $currentPassword, string $newPasswor
     }
 
     if ($newPassword !== $confirmPassword) {
-        throw new RuntimeException('A confirmacao da nova senha nao confere.');
+        throw new RuntimeException('A confirmação da nova senha não confere.');
     }
 
     if (is_default_password($newPassword)) {

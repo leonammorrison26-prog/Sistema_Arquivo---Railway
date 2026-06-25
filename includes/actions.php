@@ -265,7 +265,7 @@ function save_sei_demanda(): void
     $state = sei_queue_state($user);
     if (!$state['is_turn']) {
         $nextName = (string) ($state['next']['nome'] ?? 'proximo atendente');
-        throw new RuntimeException('Ainda nao e sua vez. Proximo atendimento: ' . $nextName . '.');
+        throw new RuntimeException('Ainda não é sua vez. Próximo atendimento: ' . $nextName . '.');
     }
 
     $process = normalize_sei_process((string) ($_POST['processo'] ?? ''));
@@ -291,7 +291,7 @@ function skip_sei_demanda(): void
     $state = sei_queue_state($admin);
     $next = $state['next'] ?? null;
     if (!$next) {
-        throw new RuntimeException('Nao ha terceirizado na fila para pular.');
+        throw new RuntimeException('Não há terceirizado na fila para pular.');
     }
 
     $expectedLogin = trim((string) ($_POST['usuario_login'] ?? ''));
@@ -474,7 +474,7 @@ function save_manual_processos(): void
 {
     $caixa = trim((string) ($_POST['CAIXA'] ?? ''));
     if ($caixa === '') {
-        throw new RuntimeException('Informe o numero da caixa.');
+        throw new RuntimeException('Informe o número da caixa.');
     }
 
     $processos = $_POST['PROCESSO'] ?? [];
@@ -607,7 +607,7 @@ function save_mapa_posicao(): void
         throw new RuntimeException('Tipo de estrutura invalido.');
     }
     if ($numero === '') {
-        throw new RuntimeException('Informe o numero da estante ou modulo.');
+        throw new RuntimeException('Informe o número da estante ou módulo.');
     }
     if (!preg_match('/^#[0-9a-fA-F]{6}$/', $corSetor)) {
         $corSetor = '#0ea5e9';
@@ -620,7 +620,7 @@ function save_mapa_posicao(): void
     for ($i = 1; $i <= $prateleiras; $i++) {
         $value = max(0, (int) ($prateleirasInput[$i - 1] ?? 0));
         if ($value > $capacidade) {
-            throw new RuntimeException('A P' . $i . ' nao pode passar de ' . $capacidade . ' caixas.');
+            throw new RuntimeException('A P' . $i . ' não pode passar de ' . $capacidade . ' caixas.');
         }
         $ocupacaoPrateleiras[] = $value;
         $caixasCores[$i - 1] = [];
@@ -636,7 +636,7 @@ function save_mapa_posicao(): void
     }
 
     if ($caixas > $total) {
-        throw new RuntimeException('As caixas ocupadas nao podem passar da capacidade total de ' . $total . '.');
+        throw new RuntimeException('As caixas ocupadas não podem passar da capacidade total de ' . $total . '.');
     }
 
     $params = [
@@ -691,7 +691,7 @@ function delete_mapa_posicao(): void
 {
     $id = max(0, (int) ($_POST['id'] ?? 0));
     if ($id <= 0) {
-        throw new RuntimeException('Posicao nao encontrada.');
+        throw new RuntimeException('Posição não encontrada.');
     }
 
     db()->prepare('DELETE FROM acervo_mapa_posicoes WHERE id = :id')->execute([':id' => $id]);
@@ -717,7 +717,7 @@ function save_mapa_caixa_cor(): void
     $stmt->execute([':id' => $id]);
     $row = $stmt->fetch();
     if (!$row) {
-        throw new RuntimeException('Posicao do mapa nao encontrada.');
+        throw new RuntimeException('Posição do mapa não encontrada.');
     }
 
     $prateleiras = max(1, (int) ($row['prateleiras'] ?? 1));
@@ -756,7 +756,7 @@ function save_mapa_setor_cor(): void
     $stmt = db()->prepare('SELECT id FROM acervo_mapa_posicoes WHERE id = :id');
     $stmt->execute([':id' => $id]);
     if (!$stmt->fetchColumn()) {
-        throw new RuntimeException('Posicao do mapa nao encontrada.');
+        throw new RuntimeException('Posição do mapa não encontrada.');
     }
 
     db()->prepare('
@@ -807,7 +807,7 @@ function delete_mapa_setor(): void
 {
     $id = max(0, (int) ($_POST['id'] ?? 0));
     if ($id <= 0) {
-        throw new RuntimeException('Setor nao encontrado.');
+        throw new RuntimeException('Setor não encontrado.');
     }
 
     db()->prepare('DELETE FROM acervo_mapa_setores WHERE id = :id')->execute([':id' => $id]);
@@ -823,10 +823,10 @@ function save_user(): void
         $stmt->execute([':id' => $id]);
         $currentUser = $stmt->fetch() ?: [];
         if (!$currentUser) {
-            throw new RuntimeException('Usuario nao encontrado.');
+            throw new RuntimeException('Usuário não encontrado.');
         }
         if (strtoupper((string) ($currentUser['login'] ?? '')) === 'ADMIN') {
-            throw new RuntimeException('O usuario ADMIN nao pode ser alterado por aqui.');
+            throw new RuntimeException('O usuário ADMIN não pode ser alterado por aqui.');
         }
     }
 

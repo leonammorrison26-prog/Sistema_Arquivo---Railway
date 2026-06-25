@@ -8,7 +8,7 @@ $target = $argv[2] ?? ($root . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPAR
 $targetDir = dirname($target);
 
 if (!is_file($source)) {
-    fwrite(STDERR, "Fonte nao encontrada: {$source}\n");
+    fwrite(STDERR, "Fonte não encontrada: {$source}\n");
     exit(1);
 }
 

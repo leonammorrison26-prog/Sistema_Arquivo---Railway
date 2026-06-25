@@ -240,7 +240,7 @@ document.querySelectorAll('[data-mapa-form]').forEach((form) => {
 
     function syncStructureType() {
         const isLooseShelf = typeInput?.value === 'estante';
-        if (numberLabel) numberLabel.textContent = isLooseShelf ? 'N. de Estante' : 'N. do Modulo';
+        if (numberLabel) numberLabel.textContent = isLooseShelf ? 'N. de Estante' : 'N. do Módulo';
         if (numberInput) numberInput.placeholder = isLooseShelf ? 'Ex: 01' : 'Ex: 01';
         if (looseShelfField) looseShelfField.hidden = isLooseShelf;
         if (looseShelfInput) looseShelfInput.disabled = isLooseShelf;

@@ -250,7 +250,7 @@ function migrate_db(PDO $pdo): void
     try {
         $pdo->exec('CREATE VIRTUAL TABLE IF NOT EXISTS acervo_fts USING fts5(id_unico UNINDEXED, texto)');
     } catch (Throwable) {
-        // FTS5 pode nao estar disponivel em alguns builds de SQLite.
+        // FTS5 pode não estar disponível em alguns builds de SQLite.
     }
 
     $exists = (int) $pdo->query("SELECT COUNT(*) FROM usuarios WHERE UPPER(login) = 'ADMIN'")->fetchColumn();

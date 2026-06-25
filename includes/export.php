@@ -15,7 +15,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 function export_xlsx(string $filename, array $rows, string $sheetName = 'Dados'): never
 {
     if (!class_exists(Spreadsheet::class)) {
-        throw new RuntimeException('Biblioteca PhpSpreadsheet nao instalada. Execute composer install.');
+        throw new RuntimeException('Biblioteca PhpSpreadsheet não instalada. Execute composer install.');
     }
 
     $spreadsheet = new Spreadsheet();
@@ -59,7 +59,7 @@ function export_csv_query(string $filename, string $sql, array $params = []): ne
 
     $out = fopen('php://output', 'wb');
     if ($out === false) {
-        throw new RuntimeException('Nao foi possivel abrir a saida do relatorio.');
+        throw new RuntimeException('Não foi possível abrir a saída do relatório.');
     }
 
     fwrite($out, "\xEF\xBB\xBF");
@@ -91,7 +91,7 @@ function export_csv_query_mapped(string $filename, string $sql, callable $mapper
 
     $out = fopen('php://output', 'wb');
     if ($out === false) {
-        throw new RuntimeException('Nao foi possivel abrir a saida do relatorio.');
+        throw new RuntimeException('Não foi possível abrir a saída do relatório.');
     }
 
     fwrite($out, "\xEF\xBB\xBF");
@@ -116,11 +116,11 @@ function export_csv_query_mapped(string $filename, string $sql, callable $mapper
 function export_xlsx_template_query_mapped(string $filename, string $templatePath, string $sql, callable $mapper, array $params = []): never
 {
     if (!class_exists(IOFactory::class)) {
-        throw new RuntimeException('Biblioteca PhpSpreadsheet nao instalada. Execute composer install.');
+        throw new RuntimeException('Biblioteca PhpSpreadsheet não instalada. Execute composer install.');
     }
 
     if (!is_file($templatePath)) {
-        throw new RuntimeException('Modelo de planilha nao encontrado: ' . $templatePath);
+        throw new RuntimeException('Modelo de planilha não encontrado: ' . $templatePath);
     }
 
     $stmt = db()->prepare($sql);

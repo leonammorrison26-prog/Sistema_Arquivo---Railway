@@ -25,14 +25,14 @@ function supabase_status(): string
         return 'modo local: usando banco SQLite';
     }
 
-    return supabase_enabled() ? 'Railway: Supabase conectado/configurado' : 'Railway: SUPABASE_URL e SUPABASE_KEY nao configurados';
+    return supabase_enabled() ? 'Railway: Supabase conectado/configurado' : 'Railway: SUPABASE_URL e SUPABASE_KEY não configurados';
 }
 
 function supabase_request(string $method, string $table, array $payload = [], array $query = [], bool $mandatory = true): array
 {
     if (!supabase_enabled()) {
         if ($mandatory) {
-            throw new RuntimeException('Supabase obrigatorio nao configurado. Configure SUPABASE_URL e SUPABASE_KEY no Railway.');
+            throw new RuntimeException('Supabase obrigatório não configurado. Configure SUPABASE_URL e SUPABASE_KEY no Railway.');
         }
         return [];
     }
@@ -111,7 +111,7 @@ function supabase_fetch_user(string $login, string $senha): ?array
 function supabase_update_user_password(string $login, string $senha): void
 {
     if (!supabase_enabled()) {
-        throw new RuntimeException('Supabase obrigatorio nao configurado. Configure SUPABASE_URL e SUPABASE_KEY no Railway.');
+        throw new RuntimeException('Supabase obrigatório não configurado. Configure SUPABASE_URL e SUPABASE_KEY no Railway.');
     }
 
     $existingUser = supabase_request('GET', 'usuarios', [], [
@@ -138,10 +138,10 @@ function supabase_update_user_password(string $login, string $senha): void
     }
 
     if ($existingUser) {
-        throw new RuntimeException('O usuario ' . $login . ' existe no Supabase, mas a tabela usuarios nao permitiu UPDATE. Aplique a migration supabase/migrations/20260618120000_allow_usuarios_update.sql no Supabase de producao.');
+        throw new RuntimeException('O usuário ' . $login . ' existe no Supabase, mas a tabela usuarios não permitiu UPDATE. Aplique a migration supabase/migrations/20260618120000_allow_usuarios_update.sql no Supabase de produção.');
     }
 
-    throw new RuntimeException('Nao foi possivel atualizar a senha no Supabase para o usuario ' . $login . '.');
+    throw new RuntimeException('Não foi possível atualizar a senha no Supabase para o usuário ' . $login . '.');
 }
 
 function supabase_upsert(string $table, array $row, string $onConflict = ''): array

@@ -94,7 +94,7 @@ function render_header(string $title = APP_NAME): void
             </header>
             <?php if (app_running_on_railway() && !supabase_enabled()): ?>
                 <div class="alert danger dismissible-alert" role="alert">
-                    <span>Supabase obrigatorio nao configurado: <?= h(supabase_status()) ?></span>
+                    <span>Supabase obrigatório não configurado: <?= h(supabase_status()) ?></span>
                     <button class="alert-close" type="button" aria-label="Fechar aviso" data-dismiss-alert>&times;</button>
                 </div>
             <?php endif; ?>
@@ -164,14 +164,14 @@ function page_title_label(string $page): string
         'cad_processo' => 'Cadastro manual de processos',
         'planilha' => 'Gestao de cadastros importados',
         'gestao_usuarios' => 'Usuarios, permissoes e acessos',
-        'documentos' => 'Geracao de documentos e PDFs',
+        'documentos' => 'Geração de documentos e PDFs',
         'indicadores_semanal' => 'Registro semanal de indicadores',
         'dashboard' => 'Painel operacional DIARQ',
         'diagnostico' => 'Conexao, banco e importacoes',
         'mapa_acervo' => 'Mapa visual do acervo',
         'preview_export' => 'Conferencia antes da exportacao',
         'rel_temporalidade' => 'Itens sem temporalidade',
-        'rel_indicadores' => 'Relatorio de indicadores',
+        'rel_indicadores' => 'Relatório de indicadores',
         'rel_demanda_sei' => 'Demandas e fila do SEI',
         'assistente_openai' => 'Assistente virtual DIARQ',
         'trocar_senha' => 'Seguranca da conta',
@@ -289,32 +289,35 @@ function render_sidebar(): void
 
             <div class="side-separator"></div>
 
-            <h3><?= side_icon('tools') ?> MENU DE SERVIÇOS</h3>
+            <details class="nav-section" open>
+                <summary><h3><span class="nav-chevron section-caret" aria-hidden="true">&gt;</span><?= side_icon('tools') ?> MENU DE SERVIÇOS</h3></summary>
+                <div class="nav-section-body">
+                    <details class="nav-group">
+                        <?php sidebar_summary('Arquivamento / Desarq.', 'archive'); ?>
+                        <div class="nav-submenu">
+                            <a class="side-button sub-button" href="#" title="Registrar Arquivamento"><?= side_icon('box') ?><span class="side-label">Registrar Arquivamento</span></a>
+                            <a class="side-button sub-button" href="#" title="Registrar Desarquivamento"><?= side_icon('upload') ?><span class="side-label">Registrar Desarquivamento</span></a>
+                        </div>
+                    </details>
 
-            <details class="nav-group">
-                <?php sidebar_summary('Arquivamento / Desarq.', 'archive'); ?>
-                <div class="nav-submenu">
-                    <a class="side-button sub-button" href="#" title="Registrar Arquivamento"><?= side_icon('box') ?><span class="side-label">Registrar Arquivamento</span></a>
-                    <a class="side-button sub-button" href="#" title="Registrar Desarquivamento"><?= side_icon('upload') ?><span class="side-label">Registrar Desarquivamento</span></a>
-                </div>
-            </details>
+                    <details class="nav-group">
+                        <?php sidebar_summary('Gerar Documentos', 'doc'); ?>
+                        <div class="nav-submenu">
+                            <a class="side-button sub-button" href="/?page=documentos&doc=etiqueta" title="Etiqueta de Caixa"><?= side_icon('tag') ?><span class="side-label">Etiqueta de Caixa</span></a>
+                            <a class="side-button sub-button" href="/?page=documentos&doc=guia" title="Guia Fora"><?= side_icon('note') ?><span class="side-label">Guia Fora</span></a>
+                        </div>
+                    </details>
 
-            <details class="nav-group">
-                <?php sidebar_summary('Gerar Documentos', 'doc'); ?>
-                <div class="nav-submenu">
-                    <a class="side-button sub-button" href="/?page=documentos&doc=etiqueta" title="Etiqueta de Caixa"><?= side_icon('tag') ?><span class="side-label">Etiqueta de Caixa</span></a>
-                    <a class="side-button sub-button" href="/?page=documentos&doc=guia" title="Guia Fora"><?= side_icon('note') ?><span class="side-label">Guia Fora</span></a>
-                </div>
-            </details>
-
-            <details class="nav-group">
-                <?php sidebar_summary('Cadastrar', 'plus'); ?>
-                <div class="nav-submenu">
-                    <?php sidebar_link('cad_caixa', 'Caixas', 'box'); ?>
-                    <?php if (user_is_admin()): ?><?php sidebar_link('gestao_usuarios', 'Usuarios', 'user'); ?><?php endif; ?>
-                    <?php sidebar_link('indicadores_semanal', 'Indicadores semanal', 'chart'); ?>
-                    <?php sidebar_link('cad_processo', 'Processos', 'doc'); ?>
-                    <?php sidebar_link('planilha', 'Gestao de Cadastros', 'table'); ?>
+                    <details class="nav-group">
+                        <?php sidebar_summary('Cadastrar', 'plus'); ?>
+                        <div class="nav-submenu">
+                            <?php sidebar_link('cad_caixa', 'Caixas', 'box'); ?>
+                            <?php if (user_is_admin()): ?><?php sidebar_link('gestao_usuarios', 'Usuarios', 'user'); ?><?php endif; ?>
+                            <?php sidebar_link('indicadores_semanal', 'Indicadores semanal', 'chart'); ?>
+                            <?php sidebar_link('cad_processo', 'Processos', 'doc'); ?>
+                            <?php sidebar_link('planilha', 'Gestao de Cadastros', 'table'); ?>
+                        </div>
+                    </details>
                 </div>
             </details>
 
@@ -328,22 +331,26 @@ function render_sidebar(): void
 
             <div class="side-separator"></div>
 
-            <h3>Acesso ao SEI & Pasta Compart</h3>
-            <a class="side-button" href="https://sei.mds.gov.br/sip/login.php?sigla_orgao_sistema=MC&sigla_sistema=SEI&infra_url=L3NlaS8=" target="_blank" title="Abrir SEI - MDS">
-                <?php if ($seiLogo): ?>
-                    <img class="sei-logo" src="<?= h($seiLogo) ?>" alt="SEI MDS">
-                <?php else: ?>
-                    <span class="sei-badge">sei!</span>
-                <?php endif; ?>
-                <span class="side-label">Abrir SEI - MDS</span>
-            </a>
-            <a class="side-button side-button-feature side-button-pasta" href="diarq://" title="Abrir Pasta Compart - Diarq">
-                <?= sidebar_image_icon($pastaCompLogo, 'Pasta Compart', 'side-image-pasta') ?: side_icon('folder') ?>
-                <span class="side-label">Abrir Pasta Compart - Diarq</span>
-            </a>
-            <?php if (!diarq_network_configured()): ?>
-                <a class="side-button" href="/configurar_diarq.bat" download title="Configurar Acesso à Rede"><?= side_icon('download') ?><span class="side-label">Configurar Acesso à Rede (Rodar uma vez)</span></a>
-            <?php endif; ?>
+            <details class="nav-section" open>
+                <summary><h3><span class="nav-chevron section-caret" aria-hidden="true">&gt;</span>Acesso ao SEI & Pasta Compart</h3></summary>
+                <div class="nav-section-body">
+                    <a class="side-button" href="https://sei.mds.gov.br/sip/login.php?sigla_orgao_sistema=MC&sigla_sistema=SEI&infra_url=L3NlaS8=" target="_blank" title="Abrir SEI - MDS">
+                        <?php if ($seiLogo): ?>
+                            <img class="sei-logo" src="<?= h($seiLogo) ?>" alt="SEI MDS">
+                        <?php else: ?>
+                            <span class="sei-badge">sei!</span>
+                        <?php endif; ?>
+                        <span class="side-label">Abrir SEI - MDS</span>
+                    </a>
+                    <a class="side-button side-button-feature side-button-pasta" href="diarq://" title="Abrir Pasta Compart - Diarq">
+                        <?= sidebar_image_icon($pastaCompLogo, 'Pasta Compart', 'side-image-pasta') ?: side_icon('folder') ?>
+                        <span class="side-label">Abrir Pasta Compart - Diarq</span>
+                    </a>
+                    <?php if (!diarq_network_configured()): ?>
+                        <a class="side-button" href="/configurar_diarq.bat" download title="Configurar Acesso à Rede"><?= side_icon('download') ?><span class="side-label">Configurar Acesso à Rede (Rodar uma vez)</span></a>
+                    <?php endif; ?>
+                </div>
+            </details>
 
             <details class="nav-group">
                 <?php sidebar_summary('Gerar Relatórios', 'chart'); ?>
@@ -351,7 +358,7 @@ function render_sidebar(): void
                     <a class="side-button sub-button" href="/?export=acervo" title="Relatório Geral do Acervo"><?= side_icon('download') ?><span class="side-label">Relatório Geral do Acervo</span></a>
                     <?php sidebar_link('preview_export', 'Prévia de Exportação', 'table'); ?>
                     <?php sidebar_link('rel_indicadores', 'Relatório Indicadores', 'chart'); ?>
-                    <?php sidebar_link('rel_demanda_sei', 'Relatorio Demanda SEI', 'chart'); ?>
+                    <?php sidebar_link('rel_demanda_sei', 'Relatório Demanda SEI', 'chart'); ?>
                     <?php sidebar_link('dashboard', 'Dashboard', 'dashboard'); ?>
                     <?php sidebar_link('mapa_acervo', 'Mapa do Acervo', 'folder'); ?>
                 </div>
