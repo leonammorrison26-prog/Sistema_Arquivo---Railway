@@ -287,20 +287,14 @@
     cursor: pointer;
 }
 
-.mapa-setores-list {
-    display: grid;
-    gap: 8px;
+/* Garantir que os botões da paleta mantenham a cor no tema claro (sobrepõe regras genéricas de button) */
+body.theme-light .mapa-free-colors button,
+body.theme-light .mapa-setor-use {
+    background: var(--sector-free) !important;
+    border-color: rgba(148, 163, 184, .42) !important;
 }
-
-.mapa-setor-row {
-    display: grid;
-    grid-template-columns: 26px minmax(0, 1fr) auto auto;
-    gap: 8px;
-    align-items: center;
-    padding: 8px;
-    border: 1px solid rgba(148, 163, 184, .18);
-    border-radius: 9px;
-    background: rgba(255, 255, 255, .045);
+body.theme-light .mapa-setor-row .mapa-setor-use {
+    background: var(--sector-row) !important;
 }
 
 .mapa-setor-use {
