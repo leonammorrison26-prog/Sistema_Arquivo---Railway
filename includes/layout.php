@@ -49,7 +49,7 @@ function render_header(string $title = APP_NAME): void
                 <section class="top-user-card" aria-label="Usuario logado">
                     <span class="top-user-avatar"><?= side_icon('user') ?></span>
                     <span class="top-user-main">
-                        <strong><?= h($user['nome'] ?? 'Usuario') ?></strong>
+                        <strong><?= h(user_display_login($user ?? [])) ?></strong>
                         <span>Setor: <?= h($user['departamento'] ?? 'DIARQ') ?> | Tipo: <?= h($user['tipo_usuario'] ?? 'Servidor') ?></span>
                     </span>
                     <span class="top-user-status" title="<?= h(supabase_status()) ?>"></span>

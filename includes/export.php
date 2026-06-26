@@ -313,6 +313,7 @@ function indicador_report_item(array $row): array
     return [
         'data' => (string) ($row['data'] ?? ''),
         'colaborador' => (string) ($row['colaborador'] ?? ''),
+        'colaborador_display' => user_display_login_by_name((string) ($row['colaborador'] ?? '')),
         'total' => array_sum($indicadores),
         'indicadores' => $indicadores,
         'resumo' => indicador_report_summary($indicadores),
@@ -373,7 +374,7 @@ function indicadores_export_rows(array $filters = []): array
     foreach (indicadores_report_rows($filters) as $item) {
         $rows[] = [
             'Periodo' => $item['data'],
-            'Colaborador' => $item['colaborador'],
+            'Colaborador' => $item['colaborador_display'] ?? user_display_login_by_name((string) $item['colaborador']),
             'Total' => $item['total'],
             'Indicadores' => $item['resumo'],
             'Atividades' => $item['atividades'],

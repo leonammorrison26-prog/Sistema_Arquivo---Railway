@@ -159,7 +159,7 @@ function render_central(): void
             <section class="dashboard-card wide">
                 <div class="dashboard-card-head"><div><span class="eyebrow">Timeline</span><h3>Últimos eventos</h3></div></div>
                 <div class="activity-list">
-                    <?php foreach ($events as $event): ?><article><strong><?= h($event['tipo']) ?></strong><span><?= h($event['mensagem']) ?></span><em><?= h($event['usuario_nome'] ?: $event['usuario_login'] ?: 'Sistema') ?> · <?= h($event['criado_em']) ?></em></article><?php endforeach; ?>
+                    <?php foreach ($events as $event): ?><article><strong><?= h($event['tipo']) ?></strong><span><?= h($event['mensagem']) ?></span><em><?= h(((string) ($event['usuario_nome'] ?? '') !== '' || (string) ($event['usuario_login'] ?? '') !== '') ? user_display_login((string) ($event['usuario_nome'] ?? ''), (string) ($event['usuario_login'] ?? '')) : 'Sistema') ?> · <?= h($event['criado_em']) ?></em></article><?php endforeach; ?>
                 </div>
             </section>
         </div>
@@ -188,7 +188,7 @@ function render_sei_home_widget(): void
             </form>
         <?php else: ?>
             <span>Próxima demanda</span>
-            <strong class="sei-home-next"><?= h($next['nome'] ?: $next['login']) ?></strong>
+            <strong class="sei-home-next"><?= h(user_display_login($next)) ?></strong>
         <?php endif; ?>
 
         <div class="sei-home-meta">
@@ -236,7 +236,7 @@ function render_sei_queue_widget(): void
                 </form>
             <?php else: ?>
                 <h2>Pr&oacute;xima demanda do SEI</h2>
-                <p class="sei-next-name"><?= h($next['nome'] ?: $next['login']) ?></p>
+                <p class="sei-next-name"><?= h(user_display_login($next)) ?></p>
                 <span class="sei-waiting">Sua vez chega assim que o atendimento atual for registrado.</span>
             <?php endif; ?>
         </div>
@@ -247,14 +247,14 @@ function render_sei_queue_widget(): void
             </div>
             <div>
                 <span>&Uacute;ltimo movimento</span>
-                <strong><?= h((string) ($last['usuario_nome'] ?? 'Ainda sem registro')) ?></strong>
+                <strong><?= $last ? h(user_display_login((string) ($last['usuario_nome'] ?? ''), (string) ($last['usuario_login'] ?? ''))) : 'Ainda sem registro' ?></strong>
                 <?php if ($last): ?>
                     <small><?= ($last['status'] ?? 'atendido') === 'pulado' ? 'Vez pulada' : h((string) $last['processo']) ?></small>
                 <?php endif; ?>
             </div>
             <div>
                 <span>Depois</span>
-                <strong><?= h((string) ($afterNext['nome'] ?? 'Fila reinicia')) ?></strong>
+                <strong><?= $afterNext ? h(user_display_login($afterNext)) : 'Fila reinicia' ?></strong>
             </div>
             <a class="button" href="/?page=rel_demanda_sei">Relat&oacute;rio Demanda SEI</a>
         </aside>
@@ -773,13 +773,14 @@ function render_usuarios(): void
                         <?php
                             $isAdmin = (int) ($user['p_gerir_usuarios'] ?? 0) === 1 || strtoupper((string) ($user['login'] ?? '')) === 'ADMIN';
                             $syncOn = (int) ($user['p_sincronizar'] ?? 0) === 1;
-                            $initial = strtoupper(substr((string) ($user['nome'] ?: $user['login'] ?: 'U'), 0, 1));
+                            $displayLogin = user_display_login($user);
+                            $initial = strtoupper(substr($displayLogin ?: 'U', 0, 1));
                         ?>
                         <article class="user-row">
                             <div class="avatar"><?= h($initial) ?></div>
                             <div class="user-main">
-                                <strong><?= h($user['nome'] ?: 'Sem nome') ?></strong>
-                                <span><?= h($user['login'] ?: 'sem-login') ?> · <?= h($user['departamento'] ?: 'DIARQ') ?></span>
+                                <strong><?= h($displayLogin) ?></strong>
+                                <span><?= h($user['nome'] ?: 'Sem nome') ?> · <?= h($user['departamento'] ?: 'DIARQ') ?></span>
                             </div>
                             <div class="user-badges">
                                 <span class="badge"><?= h($user['tipo_usuario'] ?: 'Servidor') ?></span>
@@ -902,7 +903,7 @@ function render_documentos(): void
                     <label>Processo SEI <input name="processo_sei"></label>
                     <label>Solicitante <input name="solicitante"></label>
                     <label>Data <input name="data" value="<?= h(date('d/m/Y')) ?>"></label>
-                    <label>Respons&aacute;vel DIARQ <input name="responsavel" value="<?= h($_SESSION['user']['nome'] ?? '') ?>"></label>
+                    <label>Respons&aacute;vel DIARQ <input name="responsavel" value="<?= h(user_display_login($_SESSION['user'] ?? [])) ?>"></label>
                     <label class="span-2">Endereço <textarea name="endereco" rows="3"></textarea></label>
                     <div class="form-actions span-2">
                         <button class="primary user-submit" type="submit">Gerar Guia Fora PDF</button>
@@ -947,7 +948,7 @@ function render_indicadores(): void
                 </label>
                 <div class="indicador-user-card">
                     <span>Colaborador</span>
-                    <strong><?= h($_SESSION['user']['nome'] ?? 'Colaborador') ?></strong>
+                    <strong><?= h(user_display_login($_SESSION['user'] ?? [])) ?></strong>
                 </div>
                 <a class="button" href="/?page=rel_indicadores"><?= app_icon('dashboard') ?>Consultar relatório</a>
             </div>
@@ -1135,7 +1136,7 @@ function render_dashboard(): void
                     <div class="rank-list compact">
                         <?php foreach ($seiRanking as $row): ?>
                             <div class="rank-row">
-                                <span><?= h((string) ($row['usuario_nome'] ?: $row['usuario_login'])) ?></span>
+                                <span><?= h(user_display_login((string) ($row['usuario_nome'] ?? ''), (string) ($row['usuario_login'] ?? ''))) ?></span>
                                 <strong><?= h($fmt($row['total'])) ?></strong>
                                 <i style="--w: <?= h((string) $bar($row['total'], $maxSei)) ?>%"></i>
                             </div>
@@ -1890,7 +1891,7 @@ function render_rel_indicadores(): void
                 <select name="colaborador">
                     <option value="">Todos</option>
                     <?php foreach ($colaboradores as $colaborador): ?>
-                        <option value="<?= h($colaborador) ?>" <?= (($_GET['colaborador'] ?? '') === $colaborador) ? 'selected' : '' ?>><?= h($colaborador) ?></option>
+                        <option value="<?= h($colaborador) ?>" <?= (($_GET['colaborador'] ?? '') === $colaborador) ? 'selected' : '' ?>><?= h(user_display_login_by_name($colaborador)) ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
@@ -1943,7 +1944,7 @@ function render_rel_indicadores(): void
                             <?php foreach ($rows as $row): ?>
                                 <tr>
                                     <td><?= h($row['data']) ?></td>
-                                    <td><?= h($row['colaborador']) ?></td>
+                                    <td><?= h(user_display_login_by_name((string) $row['colaborador'])) ?></td>
                                     <td><strong><?= h((string) $row['total']) ?></strong></td>
                                     <td><?= h($row['resumo']) ?></td>
                                     <td><?= h(trim($row['atividades'] . ' ' . $row['observacoes']) ?: '---') ?></td>
@@ -1999,7 +2000,7 @@ function render_rel_demanda_sei(): void
         <section class="sei-flow-card">
             <div>
                 <span class="eyebrow">Fila atual</span>
-                <h3><?= h((string) ($queue['next']['nome'] ?? 'Sem terceirizados na fila')) ?></h3>
+                <h3><?= $queue['next'] ? h(user_display_login($queue['next'])) : 'Sem terceirizados na fila' ?></h3>
                 <p>Pr&oacute;ximo atendimento liberado pelo rod&iacute;zio alfab&eacute;tico.</p>
                 <?php if (user_is_admin() && $queue['next']): ?>
                     <form method="post" class="sei-skip-form" onsubmit="return confirm('Pular a vez deste usuario na demanda SEI?')">
@@ -2013,7 +2014,7 @@ function render_rel_demanda_sei(): void
             <div class="sei-flow-steps">
                 <?php foreach ($queue['users'] as $index => $user): ?>
                     <span class="<?= strcasecmp((string) $user['login'], (string) ($queue['next']['login'] ?? '')) === 0 ? 'active' : '' ?>">
-                        <?= h((string) ($index + 1)) ?>. <?= h((string) ($user['nome'] ?: $user['login'])) ?>
+                        <?= h((string) ($index + 1)) ?>. <?= h(user_display_login($user)) ?>
                     </span>
                 <?php endforeach; ?>
             </div>
@@ -2030,7 +2031,7 @@ function render_rel_demanda_sei(): void
                             <?php $width = (int) round(((int) $row['total'] / $maxRanking) * 100); ?>
                             <div class="rank-row">
                                 <i style="--w: <?= h((string) $width) ?>%"></i>
-                                <span><?= h((string) ($row['usuario_nome'] ?: $row['usuario_login'])) ?></span>
+                                <span><?= h(user_display_login((string) ($row['usuario_nome'] ?? ''), (string) ($row['usuario_login'] ?? ''))) ?></span>
                                 <strong><?= h((string) $row['total']) ?></strong>
                             </div>
                         <?php endforeach; ?>
@@ -2066,7 +2067,7 @@ function render_rel_demanda_sei(): void
                             <?php foreach ($data['recent'] as $row): ?>
                                 <tr>
                                     <td><?= h(date('d/m/Y H:i', strtotime((string) $row['criado_em']))) ?></td>
-                                    <td><?= h((string) $row['usuario_nome']) ?></td>
+                                    <td><?= h(user_display_login((string) ($row['usuario_nome'] ?? ''), (string) ($row['usuario_login'] ?? ''))) ?></td>
                                     <td><?= h((string) $row['usuario_login']) ?></td>
                                     <td><strong><?= h((string) $row['processo']) ?></strong></td>
                                 </tr>

@@ -92,6 +92,80 @@ function user_is_admin(?array $user = null): bool
     return strtoupper((string) ($user['login'] ?? '')) === 'ADMIN' || (int) ($user['p_gerir_usuarios'] ?? 0) === 1;
 }
 
+function display_login_from_name(string $name): string
+{
+    $normalized = normalize_search_text($name);
+    $parts = array_values(array_filter(explode(' ', $normalized), static fn (string $part): bool => $part !== ''));
+    if (!$parts) {
+        return '';
+    }
+
+    if (count($parts) === 1) {
+        return $parts[0];
+    }
+
+    return $parts[0] . '.' . $parts[count($parts) - 1];
+}
+
+function user_display_login(array|string|null $userOrName, ?string $login = null): string
+{
+    if (is_array($userOrName)) {
+        $login = trim((string) ($userOrName['login'] ?? $userOrName['usuario_login'] ?? $login ?? ''));
+        $name = trim((string) ($userOrName['nome'] ?? $userOrName['usuario_nome'] ?? ''));
+    } else {
+        $name = trim((string) ($userOrName ?? ''));
+        $login = trim((string) ($login ?? ''));
+    }
+
+    if ($login !== '') {
+        return $login;
+    }
+
+    $display = display_login_from_name($name);
+    return $display !== '' ? $display : 'usuario';
+}
+
+function user_display_login_by_name(string $name): string
+{
+    static $users = null;
+
+    $name = trim($name);
+    if ($name === '') {
+        return '';
+    }
+
+    if ($users === null) {
+        try {
+            $users = db()->query('SELECT nome, login FROM usuarios WHERE TRIM(login) <> ""')->fetchAll();
+        } catch (Throwable) {
+            $users = [];
+        }
+    }
+
+    $needle = normalize_search_text($name);
+    foreach ($users as $user) {
+        $userName = normalize_search_text((string) ($user['nome'] ?? ''));
+        $userLogin = normalize_search_text(str_replace('.', ' ', (string) ($user['login'] ?? '')));
+        $firstName = strtok($userName, ' ') ?: $userName;
+
+        if (
+            $needle !== ''
+            && (
+                $needle === $userName
+                || $needle === $userLogin
+                || $needle === $firstName
+                || str_starts_with($userName, $needle . ' ')
+                || str_starts_with($userLogin, $needle . ' ')
+            )
+        ) {
+            return user_display_login($user);
+        }
+    }
+
+    $fallback = display_login_from_name($name);
+    return str_contains($fallback, '.') ? $fallback : $name;
+}
+
 function user_can_move_acervo(?array $user = null): bool
 {
     $user = $user ?: ($_SESSION['user'] ?? []);

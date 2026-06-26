@@ -113,7 +113,7 @@ function handle_actions(): void
 
         if ($action === 'pdf_guia') {
             require_once __DIR__ . '/pdf.php';
-            $_POST['responsavel'] = $_SESSION['user']['nome'] ?? '';
+            $_POST['responsavel'] = user_display_login($_SESSION['user'] ?? []);
             $_POST['data'] = $_POST['data'] ?: date('d/m/Y');
             output_guia_pdf($_POST);
         }
@@ -270,7 +270,7 @@ function register_acervo_movement(): void
     }
 
     $user = $_SESSION['user'] ?? [];
-    $actor = normalize_text($user['nome'] ?? '');
+    $actor = normalize_text(user_display_login($user));
     $status = $movement === 'saida' ? 'EMPRESTADO' : '---';
     db()->prepare('UPDATE acervo SET STATUS_EMPRESTIMO = :status, QUEM_RETIROU = :actor, ALTERADO_POR = :actor, ULTIMA_ALTERACAO = :updated WHERE ID_UNICO = :id')
         ->execute([':status' => $status, ':actor' => $actor, ':updated' => date('d/m/Y H:i:s'), ':id' => $id]);
@@ -332,7 +332,7 @@ function save_sei_demanda(): void
 
     $state = sei_queue_state($user);
     if (!$state['is_turn']) {
-        $nextName = (string) ($state['next']['nome'] ?? 'proximo atendente');
+        $nextName = $state['next'] ? user_display_login($state['next']) : 'proximo atendente';
         throw new RuntimeException('Ainda não é sua vez. Próximo atendimento: ' . $nextName . '.');
     }
 
@@ -350,7 +350,7 @@ function save_sei_demanda(): void
 
     $nextState = sei_queue_state($user);
     $_SESSION['flash_success'] = 'Atendimento SEI registrado. Proxima demanda: '
-        . (string) ($nextState['next']['nome'] ?? 'fila atualizada') . '.';
+        . ($nextState['next'] ? user_display_login($nextState['next']) : 'fila atualizada') . '.';
 }
 
 function skip_sei_demanda(): void
@@ -382,8 +382,8 @@ function skip_sei_demanda(): void
     ]);
 
     $newState = sei_queue_state($admin);
-    $_SESSION['flash_success'] = 'Vez de ' . (string) ($next['nome'] ?: $next['login'])
-        . ' pulada. Proxima demanda: ' . (string) ($newState['next']['nome'] ?? 'fila atualizada') . '.';
+    $_SESSION['flash_success'] = 'Vez de ' . user_display_login($next)
+        . ' pulada. Proxima demanda: ' . ($newState['next'] ? user_display_login($newState['next']) : 'fila atualizada') . '.';
 }
 
 function planilha_export_rows(): array
@@ -505,13 +505,13 @@ function save_acervo(): void
         'LOCALIZACAO' => normalize_text($_POST['LOCALIZACAO'] ?? ''),
         'OBSERVACAO' => normalize_text($_POST['OBSERVACAO'] ?? ''),
         'VOLUMES' => normalize_text($_POST['VOLUMES'] ?? ''),
-        'RESPONSAVEL' => normalize_text($existing['RESPONSAVEL'] ?? ($_SESSION['user']['nome'] ?? '')),
+        'RESPONSAVEL' => normalize_text($existing['RESPONSAVEL'] ?? user_display_login($_SESSION['user'] ?? [])),
         'DATA_LIMITE' => normalize_text($_POST['DATA_LIMITE'] ?? ''),
-        'ALTERADO_POR' => $_SESSION['user']['nome'] ?? '',
+        'ALTERADO_POR' => user_display_login($_SESSION['user'] ?? []),
         'ULTIMA_ALTERACAO' => date('d/m/Y H:i:s'),
         'STATUS_EMPRESTIMO' => $statusEmprestimo,
         'QUEM_RETIROU' => $movimento !== ''
-            ? normalize_text($_SESSION['user']['nome'] ?? '')
+            ? normalize_text(user_display_login($_SESSION['user'] ?? []))
             : normalize_text($existing['QUEM_RETIROU'] ?? ($_POST['QUEM_RETIROU'] ?? '')),
         'FONTE_ARQUIVO' => normalize_text($existing['FONTE_ARQUIVO'] ?? 'cadastro_web_php'),
     ];
@@ -596,9 +596,9 @@ function save_manual_processos(): void
             'LOCALIZACAO' => normalize_text($_POST['LOCALIZACAO'] ?? ''),
             'OBSERVACAO' => normalize_text('Cadastro manual' . (trim((string) ($_POST['TIPO_DOCUMENTO'] ?? '')) !== '' ? ' - ' . trim((string) ($_POST['TIPO_DOCUMENTO'] ?? '')) : '')),
             'VOLUMES' => normalize_text((string) ($volumes[$index] ?? '')),
-            'RESPONSAVEL' => $_SESSION['user']['nome'] ?? '',
+            'RESPONSAVEL' => user_display_login($_SESSION['user'] ?? []),
             'DATA_LIMITE' => normalize_text($_POST['DATA_LIMITE'] ?? ''),
-            'ALTERADO_POR' => $_SESSION['user']['nome'] ?? '',
+            'ALTERADO_POR' => user_display_login($_SESSION['user'] ?? []),
             'ULTIMA_ALTERACAO' => date('d/m/Y H:i:s'),
             'STATUS_EMPRESTIMO' => '---',
             'QUEM_RETIROU' => '---',
@@ -657,7 +657,7 @@ function save_indicadores(): void
     ];
 
     $row = [
-        'colaborador' => $_SESSION['user']['nome'] ?? 'Colaborador',
+        'colaborador' => user_display_login($_SESSION['user'] ?? []),
         'data' => $data,
         'dados_json' => json_encode($dados, JSON_UNESCAPED_UNICODE),
     ];
