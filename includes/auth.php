@@ -112,7 +112,9 @@ function sync_after_login(): void
             $messages[] = 'Supabase: '
                 . (int) ($result['supabase']['acervo'] ?? 0) . ' item(ns) do acervo e '
                 . (int) ($result['supabase']['usuarios'] ?? 0) . ' usuario(s), '
-                . (int) ($result['supabase']['indicadores'] ?? 0) . ' indicador(es).';
+                . (int) ($result['supabase']['indicadores'] ?? 0) . ' indicador(es), '
+                . (int) ($result['supabase']['mapa_posicoes'] ?? 0) . ' posicao(oes) do mapa e '
+                . (int) ($result['supabase']['mapa_setores'] ?? 0) . ' setor(es) do mapa.';
         }
 
         if (($result['planilhas']['enabled'] ?? false) === true) {
@@ -147,7 +149,7 @@ function sync_app_data(bool $forcePlanilhas = false): array
     $jobId = import_job_start($forcePlanilhas ? 'sincronizacao_manual' : 'sincronizacao_login', 0, $forcePlanilhas ? 'Sincronizacao manual' : 'Sincronizacao no login');
     $supabase = supabase_enabled()
         ? supabase_sync_on_login()
-        : ['enabled' => false, 'usuarios' => 0, 'acervo' => 0];
+        : ['enabled' => false, 'usuarios' => 0, 'acervo' => 0, 'indicadores' => 0, 'mapa_posicoes' => 0, 'mapa_setores' => 0];
 
     try {
         $planilhas = import_planilhas_on_login($forcePlanilhas);

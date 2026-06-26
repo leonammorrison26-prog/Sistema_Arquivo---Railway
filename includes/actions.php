@@ -748,6 +748,11 @@ function save_mapa_posicao(): void
 
     if ($id > 0) {
         $params[':id'] = $id;
+
+        if (supabase_enabled()) {
+            supabase_upsert('acervo_mapa_posicoes', supabase_mapa_posicao_payload($params, $id), 'id');
+        }
+
         db()->prepare("
             UPDATE acervo_mapa_posicoes SET
                 sala = :sala,
@@ -769,11 +774,21 @@ function save_mapa_posicao(): void
         return;
     }
 
+    $params[':id'] = null;
+    if (supabase_enabled()) {
+        $created = supabase_request('POST', 'acervo_mapa_posicoes', supabase_mapa_posicao_payload($params), [], true);
+        $remoteId = (int) ($created[0]['id'] ?? 0);
+        if ($remoteId <= 0) {
+            throw new RuntimeException('Supabase nao retornou o ID da posicao do mapa criada.');
+        }
+        $params[':id'] = $remoteId;
+    }
+
     db()->prepare("
         INSERT INTO acervo_mapa_posicoes
-            (sala, tipo, numero, numero_estante, prateleiras, capacidade_por_prateleira, caixas_ocupadas, prateleiras_ocupacao, caixas_cores, cor_setor, observacao, criado_em, atualizado_em)
+            (id, sala, tipo, numero, numero_estante, prateleiras, capacidade_por_prateleira, caixas_ocupadas, prateleiras_ocupacao, caixas_cores, cor_setor, observacao, criado_em, atualizado_em)
         VALUES
-            (:sala, :tipo, :numero, :numero_estante, :prateleiras, :capacidade_por_prateleira, :caixas_ocupadas, :prateleiras_ocupacao, :caixas_cores, :cor_setor, :observacao, :atualizado_em, :atualizado_em)
+            (:id, :sala, :tipo, :numero, :numero_estante, :prateleiras, :capacidade_por_prateleira, :caixas_ocupadas, :prateleiras_ocupacao, :caixas_cores, :cor_setor, :observacao, :atualizado_em, :atualizado_em)
     ")->execute($params);
     $_SESSION['flash_success'] = 'Posicao adicionada ao mapa.';
     system_event('mapa_acervo_criado', 'Posicao fisica criada', ['sala' => $sala, 'numero' => $numero]);
@@ -784,6 +799,10 @@ function delete_mapa_posicao(): void
     $id = max(0, (int) ($_POST['id'] ?? 0));
     if ($id <= 0) {
         throw new RuntimeException('Posição não encontrada.');
+    }
+
+    if (supabase_enabled()) {
+        supabase_request('DELETE', 'acervo_mapa_posicoes', [], ['id' => 'eq.' . $id], true);
     }
 
     db()->prepare('DELETE FROM acervo_mapa_posicoes WHERE id = :id')->execute([':id' => $id]);
@@ -820,6 +839,15 @@ function save_mapa_caixa_cor(): void
 
     $cores = mapa_acervo_caixas_cores($row);
     $cores[$shelf][$box] = $color;
+    $caixasCores = json_encode($cores, JSON_UNESCAPED_UNICODE);
+    $atualizadoEm = date('Y-m-d H:i:s');
+
+    if (supabase_enabled()) {
+        supabase_request('PATCH', 'acervo_mapa_posicoes', [
+            'caixas_cores' => $cores,
+            'atualizado_em' => $atualizadoEm,
+        ], ['id' => 'eq.' . $id], true);
+    }
 
     db()->prepare('
         UPDATE acervo_mapa_posicoes
@@ -827,8 +855,8 @@ function save_mapa_caixa_cor(): void
                atualizado_em = :atualizado_em
          WHERE id = :id
     ')->execute([
-        ':caixas_cores' => json_encode($cores, JSON_UNESCAPED_UNICODE),
-        ':atualizado_em' => date('Y-m-d H:i:s'),
+        ':caixas_cores' => $caixasCores,
+        ':atualizado_em' => $atualizadoEm,
         ':id' => $id,
     ]);
 }
@@ -851,6 +879,15 @@ function save_mapa_setor_cor(): void
         throw new RuntimeException('Posição do mapa não encontrada.');
     }
 
+    $atualizadoEm = date('Y-m-d H:i:s');
+    if (supabase_enabled()) {
+        supabase_request('PATCH', 'acervo_mapa_posicoes', [
+            'cor_setor' => $color,
+            'caixas_cores' => [],
+            'atualizado_em' => $atualizadoEm,
+        ], ['id' => 'eq.' . $id], true);
+    }
+
     db()->prepare('
         UPDATE acervo_mapa_posicoes
            SET cor_setor = :cor_setor,
@@ -860,7 +897,7 @@ function save_mapa_setor_cor(): void
     ')->execute([
         ':cor_setor' => $color,
         ':caixas_cores' => '[]',
-        ':atualizado_em' => date('Y-m-d H:i:s'),
+        ':atualizado_em' => $atualizadoEm,
         ':id' => $id,
     ]);
 }
@@ -883,14 +920,30 @@ function save_mapa_setor(): void
         throw new RuntimeException('Essa cor ja esta cadastrada em outro setor.');
     }
 
-    db()->prepare('
-        INSERT INTO acervo_mapa_setores (nome, cor, criado_em)
-        VALUES (:nome, :cor, :criado_em)
-    ')->execute([
+    $params = [
+        ':id' => null,
         ':nome' => $nome,
         ':cor' => $cor,
         ':criado_em' => date('Y-m-d H:i:s'),
-    ]);
+    ];
+
+    if (supabase_enabled()) {
+        $created = supabase_request('POST', 'acervo_mapa_setores', [
+            'nome' => $nome,
+            'cor' => $cor,
+            'criado_em' => $params[':criado_em'],
+        ], [], true);
+        $remoteId = (int) ($created[0]['id'] ?? 0);
+        if ($remoteId <= 0) {
+            throw new RuntimeException('Supabase nao retornou o ID do setor criado.');
+        }
+        $params[':id'] = $remoteId;
+    }
+
+    db()->prepare('
+        INSERT INTO acervo_mapa_setores (id, nome, cor, criado_em)
+        VALUES (:id, :nome, :cor, :criado_em)
+    ')->execute($params);
 
     $_SESSION['flash_success'] = 'Setor cadastrado na paleta.';
 }
@@ -900,6 +953,10 @@ function delete_mapa_setor(): void
     $id = max(0, (int) ($_POST['id'] ?? 0));
     if ($id <= 0) {
         throw new RuntimeException('Setor não encontrado.');
+    }
+
+    if (supabase_enabled()) {
+        supabase_request('DELETE', 'acervo_mapa_setores', [], ['id' => 'eq.' . $id], true);
     }
 
     db()->prepare('DELETE FROM acervo_mapa_setores WHERE id = :id')->execute([':id' => $id]);
@@ -1009,6 +1066,33 @@ function supabase_acervo_payload(array $row): array
         'data' => $row['DATA'] ?? '',
         'data_cadastro' => date('Y-m-d H:i:s'),
     ];
+}
+
+function supabase_mapa_posicao_payload(array $params, ?int $id = null): array
+{
+    $prateleirasOcupacao = json_decode((string) ($params[':prateleiras_ocupacao'] ?? '[]'), true);
+    $caixasCores = json_decode((string) ($params[':caixas_cores'] ?? '[]'), true);
+
+    $payload = [
+        'sala' => $params[':sala'] ?? '',
+        'tipo' => $params[':tipo'] ?? 'modulo_deslizante',
+        'numero' => $params[':numero'] ?? '',
+        'numero_estante' => $params[':numero_estante'] ?? '',
+        'prateleiras' => (int) ($params[':prateleiras'] ?? 1),
+        'capacidade_por_prateleira' => (int) ($params[':capacidade_por_prateleira'] ?? 1),
+        'caixas_ocupadas' => (int) ($params[':caixas_ocupadas'] ?? 0),
+        'prateleiras_ocupacao' => is_array($prateleirasOcupacao) ? $prateleirasOcupacao : [],
+        'caixas_cores' => is_array($caixasCores) ? $caixasCores : [],
+        'cor_setor' => $params[':cor_setor'] ?? '#0ea5e9',
+        'observacao' => $params[':observacao'] ?? '',
+        'atualizado_em' => $params[':atualizado_em'] ?? date('Y-m-d H:i:s'),
+    ];
+
+    if ($id !== null && $id > 0) {
+        $payload['id'] = $id;
+    }
+
+    return $payload;
 }
 
 function supabase_user_payload(array $data): array

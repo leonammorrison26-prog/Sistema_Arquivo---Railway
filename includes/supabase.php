@@ -174,14 +174,23 @@ function supabase_fetch_all(string $table, array $query = [], int $pageSize = 10
 function supabase_sync_on_login(): array
 {
     if (!supabase_enabled()) {
-        return ['enabled' => false, 'usuarios' => 0, 'acervo' => 0, 'indicadores' => 0];
+        return ['enabled' => false, 'usuarios' => 0, 'acervo' => 0, 'indicadores' => 0, 'mapa_posicoes' => 0, 'mapa_setores' => 0];
     }
 
     $syncedUsers = supabase_sync_usuarios();
     $syncedAcervo = supabase_sync_inventario();
     $syncedIndicadores = supabase_sync_indicadores();
+    $syncedMapaPosicoes = supabase_sync_mapa_posicoes();
+    $syncedMapaSetores = supabase_sync_mapa_setores();
 
-    return ['enabled' => true, 'usuarios' => $syncedUsers, 'acervo' => $syncedAcervo, 'indicadores' => $syncedIndicadores];
+    return [
+        'enabled' => true,
+        'usuarios' => $syncedUsers,
+        'acervo' => $syncedAcervo,
+        'indicadores' => $syncedIndicadores,
+        'mapa_posicoes' => $syncedMapaPosicoes,
+        'mapa_setores' => $syncedMapaSetores,
+    ];
 }
 
 function supabase_sync_usuarios(): int
@@ -213,6 +222,124 @@ function supabase_sync_indicadores(): int
     }
 
     return count($rows);
+}
+
+function supabase_sync_mapa_posicoes(): int
+{
+    $rows = supabase_fetch_all('acervo_mapa_posicoes', ['select' => '*', 'order' => 'id.asc']);
+    foreach ($rows as $row) {
+        supabase_mirror_mapa_posicao_local($row);
+    }
+
+    return count($rows);
+}
+
+function supabase_sync_mapa_setores(): int
+{
+    $rows = supabase_fetch_all('acervo_mapa_setores', ['select' => '*', 'order' => 'id.asc']);
+    foreach ($rows as $row) {
+        supabase_mirror_mapa_setor_local($row);
+    }
+
+    return count($rows);
+}
+
+function supabase_json_text(mixed $value): string
+{
+    if (is_array($value) || is_object($value)) {
+        return json_encode($value, JSON_UNESCAPED_UNICODE) ?: '[]';
+    }
+
+    $text = trim((string) $value);
+    return $text !== '' ? $text : '[]';
+}
+
+function supabase_mirror_mapa_posicao_local(array $row): void
+{
+    $data = [
+        ':id' => (int) ($row['id'] ?? 0),
+        ':sala' => (string) ($row['sala'] ?? ''),
+        ':tipo' => (string) ($row['tipo'] ?? 'modulo_deslizante'),
+        ':numero' => (string) ($row['numero'] ?? ''),
+        ':numero_estante' => (string) ($row['numero_estante'] ?? ''),
+        ':prateleiras' => max(1, (int) ($row['prateleiras'] ?? 1)),
+        ':capacidade_por_prateleira' => max(1, (int) ($row['capacidade_por_prateleira'] ?? 1)),
+        ':caixas_ocupadas' => max(0, (int) ($row['caixas_ocupadas'] ?? 0)),
+        ':prateleiras_ocupacao' => supabase_json_text($row['prateleiras_ocupacao'] ?? []),
+        ':caixas_cores' => supabase_json_text($row['caixas_cores'] ?? []),
+        ':cor_setor' => (string) ($row['cor_setor'] ?? '#0ea5e9'),
+        ':observacao' => (string) ($row['observacao'] ?? ''),
+        ':criado_em' => (string) ($row['criado_em'] ?? date('Y-m-d H:i:s')),
+        ':atualizado_em' => (string) ($row['atualizado_em'] ?? date('Y-m-d H:i:s')),
+    ];
+
+    if ($data[':id'] <= 0) {
+        return;
+    }
+
+    $exists = db()->prepare('SELECT COUNT(*) FROM acervo_mapa_posicoes WHERE id = :id');
+    $exists->execute([':id' => $data[':id']]);
+
+    if ((int) $exists->fetchColumn() > 0) {
+        db()->prepare('
+            UPDATE acervo_mapa_posicoes SET
+                sala = :sala,
+                tipo = :tipo,
+                numero = :numero,
+                numero_estante = :numero_estante,
+                prateleiras = :prateleiras,
+                capacidade_por_prateleira = :capacidade_por_prateleira,
+                caixas_ocupadas = :caixas_ocupadas,
+                prateleiras_ocupacao = :prateleiras_ocupacao,
+                caixas_cores = :caixas_cores,
+                cor_setor = :cor_setor,
+                observacao = :observacao,
+                criado_em = :criado_em,
+                atualizado_em = :atualizado_em
+            WHERE id = :id
+        ')->execute($data);
+        return;
+    }
+
+    db()->prepare('
+        INSERT INTO acervo_mapa_posicoes
+            (id, sala, tipo, numero, numero_estante, prateleiras, capacidade_por_prateleira, caixas_ocupadas, prateleiras_ocupacao, caixas_cores, cor_setor, observacao, criado_em, atualizado_em)
+        VALUES
+            (:id, :sala, :tipo, :numero, :numero_estante, :prateleiras, :capacidade_por_prateleira, :caixas_ocupadas, :prateleiras_ocupacao, :caixas_cores, :cor_setor, :observacao, :criado_em, :atualizado_em)
+    ')->execute($data);
+}
+
+function supabase_mirror_mapa_setor_local(array $row): void
+{
+    $data = [
+        ':id' => (int) ($row['id'] ?? 0),
+        ':nome' => (string) ($row['nome'] ?? ''),
+        ':cor' => strtolower((string) ($row['cor'] ?? '#0ea5e9')),
+        ':criado_em' => (string) ($row['criado_em'] ?? date('Y-m-d H:i:s')),
+    ];
+
+    if ($data[':id'] <= 0) {
+        return;
+    }
+
+    $exists = db()->prepare('SELECT COUNT(*) FROM acervo_mapa_setores WHERE id = :id');
+    $exists->execute([':id' => $data[':id']]);
+
+    if ((int) $exists->fetchColumn() > 0) {
+        db()->prepare('
+            UPDATE acervo_mapa_setores
+               SET nome = :nome,
+                   cor = :cor,
+                   criado_em = :criado_em
+             WHERE id = :id
+        ')->execute($data);
+        return;
+    }
+
+    db()->prepare('
+        INSERT INTO acervo_mapa_setores (id, nome, cor, criado_em)
+        VALUES (:id, :nome, :cor, :criado_em)
+    ')->execute($data);
 }
 
 function mirror_indicador_local(array $row): void
