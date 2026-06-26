@@ -249,8 +249,29 @@ if (window.location.hash?.startsWith('#movimento-')) {
     openAcervoMovement(document.getElementById(window.location.hash.slice(1)));
 }
 
+document.querySelectorAll('[data-result-edit-form]').forEach((form) => {
+    const toggle = form.querySelector('[data-result-edit-toggle]');
+    const editableFields = form.querySelectorAll('[data-result-editable]');
+    const editControls = form.querySelectorAll('[data-result-edit-control], [data-result-action]');
+    const syncEditState = () => {
+        const enabled = Boolean(toggle?.checked);
+        form.classList.toggle('is-edit-enabled', enabled);
+        editableFields.forEach((field) => {
+            field.readOnly = !enabled;
+            field.setAttribute('aria-readonly', enabled ? 'false' : 'true');
+        });
+        editControls.forEach((control) => {
+            control.disabled = !enabled;
+        });
+    };
+
+    toggle?.addEventListener('change', syncEditState);
+    syncEditState();
+});
+
 document.querySelectorAll('.temp-code-link').forEach((button) => {
     button.addEventListener('click', () => {
+        if (button.disabled) return;
         const input = button.closest('label')?.querySelector('input[name="TEMPORALIDADE"]');
         if (!input) return;
         input.value = button.dataset.tempCode || '';

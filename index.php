@@ -334,17 +334,17 @@ function render_acervo_card(array $row, string $searchContext = ''): void
                 <?php endif; ?>
                 <div class="result-actions">
                     <?php if (!$isOutOfArchive && $canMove): ?>
-                        <a class="result-movement-link" href="#movimento-saida-<?= h($row['ID_UNICO'] ?? '') ?>" data-movement-modal-trigger>&#128228; Sa&iacute;da</a>
+                        <a class="result-movement-link is-active" href="#movimento-saida-<?= h($row['ID_UNICO'] ?? '') ?>" data-movement-modal-trigger>&#128228; Sa&iacute;da</a>
                     <?php else: ?>
-                        <button type="button" disabled>&#128228; Sa&iacute;da</button>
+                        <button class="result-movement-link is-disabled" type="button" disabled>&#128228; Sa&iacute;da</button>
                     <?php endif; ?>
                     <?php if ($isOutOfArchive && $canMove): ?>
-                        <a class="result-movement-link" href="#movimento-retorno-<?= h($row['ID_UNICO'] ?? '') ?>" data-movement-modal-trigger>&#128229; Retorno</a>
+                        <a class="result-movement-link is-active" href="#movimento-retorno-<?= h($row['ID_UNICO'] ?? '') ?>" data-movement-modal-trigger>&#128229; Retorno</a>
                     <?php else: ?>
-                        <button type="button" disabled>&#128229; Retorno</button>
+                        <button class="result-movement-link is-disabled" type="button" disabled>&#128229; Retorno</button>
                     <?php endif; ?>
-                    <button class="save-result" type="submit" data-result-action>&#10003; Salvar Altera&ccedil;&otilde;es</button>
-                    <details class="result-history">
+                    <button class="save-result" type="submit" data-result-action data-edit-only>&#10003; Salvar Altera&ccedil;&otilde;es</button>
+                    <details class="result-history" data-edit-only>
                         <summary>🕒 Histórico</summary>
                         <p>Modificado por: <strong><?= h($row['ALTERADO_POR'] ?? '---') ?></strong><br>Em: <?= h($row['ULTIMA_ALTERACAO'] ?? '---') ?></p>
                     </details>
