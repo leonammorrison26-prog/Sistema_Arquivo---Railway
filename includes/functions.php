@@ -49,6 +49,20 @@ function redirect_to(string $page = 'busca'): never
     exit;
 }
 
+function redirect_to_return_url(string $url, string $fallbackPage = 'busca'): never
+{
+    $url = trim($url);
+    if ($url !== '' && !str_contains($url, "\r") && !str_contains($url, "\n")) {
+        $path = parse_url($url, PHP_URL_PATH);
+        if ($path === '/') {
+            header('Location: ' . $url);
+            exit;
+        }
+    }
+
+    redirect_to($fallbackPage);
+}
+
 function indicador_field_labels(): array
 {
     return [
@@ -76,6 +90,12 @@ function user_is_admin(?array $user = null): bool
 {
     $user = $user ?: ($_SESSION['user'] ?? []);
     return strtoupper((string) ($user['login'] ?? '')) === 'ADMIN' || (int) ($user['p_gerir_usuarios'] ?? 0) === 1;
+}
+
+function user_can_move_acervo(?array $user = null): bool
+{
+    $user = $user ?: ($_SESSION['user'] ?? []);
+    return user_is_admin($user) || (int) ($user['p_emprestimo'] ?? 0) === 1;
 }
 
 function normalize_user_type(string $type): string

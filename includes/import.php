@@ -718,7 +718,12 @@ function planilha_value(array $values, array $fieldMap, string $field, string $d
         $value = $value->format('d/m/Y');
     }
 
-    return normalize_text(preg_replace('/\s+/', ' ', trim((string) $value)) ?? '');
+    $value = normalize_text(preg_replace('/\s+/', ' ', trim((string) $value)) ?? '');
+    if (in_array($field, ['DATA', 'DATA_LIMITE'], true)) {
+        return excel_serial_date_to_display($value) ?? $value;
+    }
+
+    return $value;
 }
 
 function normalize_header(string $value): string

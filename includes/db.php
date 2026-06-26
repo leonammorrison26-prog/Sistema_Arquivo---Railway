@@ -161,6 +161,21 @@ function migrate_db(PDO $pdo): void
     ");
 
     $pdo->exec("
+        CREATE TABLE IF NOT EXISTS movimentacoes_acervo (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            acervo_id TEXT NOT NULL,
+            tipo TEXT NOT NULL,
+            solicitante TEXT NOT NULL DEFAULT '',
+            setor TEXT NOT NULL DEFAULT '',
+            data_movimento TEXT NOT NULL DEFAULT '',
+            observacao TEXT NOT NULL DEFAULT '',
+            usuario_login TEXT NOT NULL DEFAULT '',
+            usuario_nome TEXT NOT NULL DEFAULT '',
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+
+    $pdo->exec("
         CREATE TABLE IF NOT EXISTS import_jobs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             tipo TEXT NOT NULL DEFAULT 'planilhas',
@@ -243,6 +258,7 @@ function migrate_db(PDO $pdo): void
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_sei_atendimentos_usuario ON sei_atendimentos (usuario_login)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_eventos_sistema_criado ON eventos_sistema (criado_em)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_eventos_sistema_tipo ON eventos_sistema (tipo)');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_movimentacoes_acervo_item ON movimentacoes_acervo (acervo_id, criado_em DESC)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_import_jobs_status ON import_jobs (status)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_acervo_mapa_sala ON acervo_mapa_posicoes (sala)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_acervo_mapa_tipo ON acervo_mapa_posicoes (tipo)');
@@ -265,6 +281,59 @@ function migrate_db(PDO $pdo): void
     }
 
     restore_bundled_backup_if_empty($pdo);
+    normalize_legacy_excel_dates($pdo);
+}
+
+function excel_serial_date_to_display(string $value): ?string
+{
+    $value = trim($value);
+    if (preg_match('/^(\d{2})(\d{2})(\d{4})$/', $value, $parts) === 1) {
+        $date = DateTimeImmutable::createFromFormat('!dmY', $value, new DateTimeZone('UTC'));
+        if ($date !== false && $date->format('dmY') === $value) {
+            return $date->format('d/m/Y');
+        }
+    }
+
+    if (!preg_match('/^\d{5}(?:\.\d+)?$/', $value)) {
+        return null;
+    }
+
+    $serial = (float) $value;
+    if ($serial < 25569 || $serial > 60000) {
+        return null;
+    }
+
+    $base = new DateTimeImmutable('1899-12-30', new DateTimeZone('UTC'));
+    return $base->modify('+' . (string) (int) floor($serial) . ' days')->format('d/m/Y');
+}
+
+function normalize_legacy_excel_dates(PDO $pdo): void
+{
+    $pdo->exec("CREATE TABLE IF NOT EXISTS app_meta (chave TEXT PRIMARY KEY, valor TEXT NOT NULL DEFAULT '')");
+    $version = (string) $pdo->query("SELECT valor FROM app_meta WHERE chave = 'excel_date_normalization_v3'")->fetchColumn();
+    if ($version === 'done') {
+        return;
+    }
+
+    $rows = $pdo->query('SELECT ID_UNICO, DATA, DATA_LIMITE FROM acervo')->fetchAll();
+    $update = $pdo->prepare('UPDATE acervo SET DATA = :data, DATA_LIMITE = :data_limite WHERE ID_UNICO = :id');
+    $pdo->beginTransaction();
+    try {
+        foreach ($rows as $row) {
+            $data = excel_serial_date_to_display((string) ($row['DATA'] ?? '')) ?? (string) ($row['DATA'] ?? '');
+            $dataLimite = excel_serial_date_to_display((string) ($row['DATA_LIMITE'] ?? '')) ?? (string) ($row['DATA_LIMITE'] ?? '');
+            if ($data === ($row['DATA'] ?? '') && $dataLimite === ($row['DATA_LIMITE'] ?? '')) {
+                continue;
+            }
+
+            $update->execute([':data' => $data, ':data_limite' => $dataLimite, ':id' => $row['ID_UNICO']]);
+        }
+        $pdo->prepare("INSERT INTO app_meta (chave, valor) VALUES ('excel_date_normalization_v3', 'done') ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor")->execute();
+        $pdo->commit();
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
 }
 
 function ensure_columns(PDO $pdo, string $table, array $columns): void

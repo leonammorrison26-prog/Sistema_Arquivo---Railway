@@ -117,8 +117,17 @@ function render_header(string $title = APP_NAME): void
 
 function render_footer(): void
 {
-    $totals = acervo_totals();
-    $showTotals = current_page() === 'busca';
+    $searchValues = [
+        $_GET['q'] ?? '',
+        $_GET['caixa'] ?? '',
+        $_GET['processo'] ?? '',
+        $_GET['interessado'] ?? '',
+        $_GET['localizacao'] ?? '',
+        $_GET['temporalidade'] ?? '',
+    ];
+    $showTotals = current_page() === 'busca'
+        && array_filter($searchValues, static fn ($value) => trim((string) $value) !== '') === [];
+    $totals = $showTotals ? acervo_totals() : [];
     ?>
             <?php if ($showTotals): ?>
             <section class="acervo-summary">

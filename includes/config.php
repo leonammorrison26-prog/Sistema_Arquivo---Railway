@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-const APP_NAME = 'Gestao de Acervos - DIARQ / MDS';
+const APP_NAME = 'Gestão de Acervos - DIARQ / MDS';
 const APP_BROWSER_TITLE = 'MDS - DIARQ';
 const APP_FAVICON_DATA_URI = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%23111827%22/%3E%3Cpath d=%22M10 19a7 7 0 0 1 7-7h10l6 7h14a7 7 0 0 1 7 7v19a7 7 0 0 1-7 7H17a7 7 0 0 1-7-7z%22 fill=%22%23fbbf24%22/%3E%3Cpath d=%22M10 27h44v18a7 7 0 0 1-7 7H17a7 7 0 0 1-7-7z%22 fill=%22%23f59e0b%22/%3E%3C/svg%3E';
 

@@ -120,7 +120,12 @@ function handle_actions(): void
 
         if ($action === 'save_acervo') {
             save_acervo();
-            redirect_to($_POST['return_page'] ?? 'planilha');
+            redirect_to_return_url($_POST['return_url'] ?? '', $_POST['return_page'] ?? 'planilha');
+        }
+
+        if ($action === 'move_acervo') {
+            register_acervo_movement();
+            redirect_to_return_url($_POST['return_url'] ?? '', $_POST['return_page'] ?? 'busca');
         }
 
         if ($action === 'save_sei_demanda') {
@@ -219,8 +224,71 @@ function handle_actions(): void
         }
     } catch (Throwable $e) {
         $_SESSION['flash_error'] = $e->getMessage();
+        if ($action === 'save_acervo') {
+            redirect_to_return_url($_POST['return_url'] ?? '', $_POST['return_page'] ?? 'busca');
+        }
         redirect_to($_POST['return_page'] ?? current_page());
     }
+}
+
+function register_acervo_movement(): void
+{
+    if (!user_can_move_acervo()) {
+        throw new RuntimeException('Seu usuário não possui permissão para registrar empréstimos.');
+    }
+
+    $id = trim((string) ($_POST['ID_UNICO'] ?? ''));
+    $movement = trim((string) ($_POST['movimento'] ?? ''));
+    $solicitante = normalize_text($_POST['solicitante'] ?? '');
+    $setor = normalize_text($_POST['setor'] ?? '');
+    $dateValue = trim((string) ($_POST['data_movimento'] ?? ''));
+    if ($id === '' || !in_array($movement, ['saida', 'retorno'], true)) {
+        throw new RuntimeException('Movimentação inválida.');
+    }
+    if ($solicitante === '' || $setor === '') {
+        throw new RuntimeException('Informe o solicitante e o setor da movimentação.');
+    }
+
+    $date = DateTimeImmutable::createFromFormat('!Y-m-d', $dateValue);
+    if ($date === false || $date->format('Y-m-d') !== $dateValue) {
+        throw new RuntimeException('Informe uma data válida para a movimentação.');
+    }
+
+    $item = db()->prepare('SELECT STATUS_EMPRESTIMO FROM acervo WHERE ID_UNICO = :id LIMIT 1');
+    $item->execute([':id' => $id]);
+    $current = $item->fetch();
+    if (!$current) {
+        throw new RuntimeException('Item do acervo não encontrado.');
+    }
+
+    $isOut = ($current['STATUS_EMPRESTIMO'] ?? '') === 'EMPRESTADO';
+    if ($movement === 'saida' && $isOut) {
+        throw new RuntimeException('Este item já está fora do arquivo.');
+    }
+    if ($movement === 'retorno' && !$isOut) {
+        throw new RuntimeException('Este item já está disponível no arquivo.');
+    }
+
+    $user = $_SESSION['user'] ?? [];
+    $actor = normalize_text($user['nome'] ?? '');
+    $status = $movement === 'saida' ? 'EMPRESTADO' : '---';
+    db()->prepare('UPDATE acervo SET STATUS_EMPRESTIMO = :status, QUEM_RETIROU = :actor, ALTERADO_POR = :actor, ULTIMA_ALTERACAO = :updated WHERE ID_UNICO = :id')
+        ->execute([':status' => $status, ':actor' => $actor, ':updated' => date('d/m/Y H:i:s'), ':id' => $id]);
+    db()->prepare('INSERT INTO movimentacoes_acervo (acervo_id, tipo, solicitante, setor, data_movimento, observacao, usuario_login, usuario_nome) VALUES (:id, :tipo, :solicitante, :setor, :data, :observacao, :login, :nome)')
+        ->execute([
+            ':id' => $id,
+            ':tipo' => $movement,
+            ':solicitante' => $solicitante,
+            ':setor' => $setor,
+            ':data' => $date->format('d/m/Y'),
+            ':observacao' => normalize_text($_POST['observacao'] ?? ''),
+            ':login' => normalize_text($user['login'] ?? ''),
+            ':nome' => $actor,
+        ]);
+    system_event('acervo_' . $movement, ucfirst($movement) . ' registrada no acervo', ['id' => $id, 'solicitante' => $solicitante, 'setor' => $setor]);
+    $_SESSION['flash_success'] = $movement === 'saida'
+        ? 'Saída registrada: item marcado como fora do arquivo.'
+        : 'Retorno registrado: item disponível no arquivo.';
 }
 
 function planilha_filter_sql(array $input, array &$params): string
@@ -403,6 +471,28 @@ function save_acervo(): void
         $id = hash('sha256', uniqid('diarq_', true));
     }
 
+    $existing = null;
+    $existingStmt = db()->prepare('SELECT RESPONSAVEL, FONTE_ARQUIVO, STATUS_EMPRESTIMO, QUEM_RETIROU FROM acervo WHERE ID_UNICO = :id LIMIT 1');
+    $existingStmt->execute([':id' => $id]);
+    $existing = $existingStmt->fetch() ?: null;
+
+    $statusEmprestimo = normalize_text($_POST['STATUS_EMPRESTIMO'] ?? '');
+    $movimento = $_POST['movimento'] ?? '';
+    if ($movimento !== '' && !user_can_move_acervo()) {
+        throw new RuntimeException('Seu usuário não possui permissão para registrar empréstimos.');
+    }
+    if ($movimento === 'saida') {
+        if (($existing['STATUS_EMPRESTIMO'] ?? '') === 'EMPRESTADO') {
+            throw new RuntimeException('Este item já está fora do arquivo.');
+        }
+        $statusEmprestimo = 'EMPRESTADO';
+    } elseif ($movimento === 'retorno') {
+        if (($existing['STATUS_EMPRESTIMO'] ?? '') !== 'EMPRESTADO') {
+            throw new RuntimeException('Este item já está disponível no arquivo.');
+        }
+        $statusEmprestimo = '---';
+    }
+
     $row = [
         'ID_UNICO' => $id,
         'UNIDADE' => normalize_text($_POST['UNIDADE'] ?? ''),
@@ -415,13 +505,15 @@ function save_acervo(): void
         'LOCALIZACAO' => normalize_text($_POST['LOCALIZACAO'] ?? ''),
         'OBSERVACAO' => normalize_text($_POST['OBSERVACAO'] ?? ''),
         'VOLUMES' => normalize_text($_POST['VOLUMES'] ?? ''),
-        'RESPONSAVEL' => $_SESSION['user']['nome'] ?? '',
+        'RESPONSAVEL' => normalize_text($existing['RESPONSAVEL'] ?? ($_SESSION['user']['nome'] ?? '')),
         'DATA_LIMITE' => normalize_text($_POST['DATA_LIMITE'] ?? ''),
         'ALTERADO_POR' => $_SESSION['user']['nome'] ?? '',
         'ULTIMA_ALTERACAO' => date('d/m/Y H:i:s'),
-        'STATUS_EMPRESTIMO' => normalize_text($_POST['STATUS_EMPRESTIMO'] ?? ''),
-        'QUEM_RETIROU' => normalize_text($_POST['QUEM_RETIROU'] ?? ''),
-        'FONTE_ARQUIVO' => 'cadastro_web_php',
+        'STATUS_EMPRESTIMO' => $statusEmprestimo,
+        'QUEM_RETIROU' => $movimento !== ''
+            ? normalize_text($_SESSION['user']['nome'] ?? '')
+            : normalize_text($existing['QUEM_RETIROU'] ?? ($_POST['QUEM_RETIROU'] ?? '')),
+        'FONTE_ARQUIVO' => normalize_text($existing['FONTE_ARQUIVO'] ?? 'cadastro_web_php'),
     ];
     $row['TEXTO_GERAL'] = build_texto_geral($row);
 

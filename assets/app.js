@@ -36,101 +36,6 @@ function bindThemeChoices() {
 
 bindThemeChoices();
 
-function setAcervoMovementModalState(modal, isOpen) {
-    if (!modal) return;
-    modal.hidden = !isOpen;
-    modal.classList.toggle('is-open', isOpen);
-    modal.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
-    document.body.classList.toggle('movement-modal-open', isOpen);
-}
-
-window.openAcervoMovement = (button) => {
-    const modal = document.getElementById(button.dataset.movementOpen);
-    if (!modal) return;
-    const movement = button.dataset.movement || '';
-    const movementInput = modal.querySelector('input[name="movimento"]');
-    if (movementInput) movementInput.value = movement;
-    modal.querySelectorAll('[data-movement-title]').forEach((element) => {
-        element.textContent = movement === 'saida' ? 'Saída' : 'Retorno';
-    });
-    setAcervoMovementModalState(modal, true);
-    modal.querySelector('input[name="solicitante"]')?.focus();
-};
-
-window.closeAcervoMovement = (button) => {
-    const modal = button.closest('.movement-modal');
-    if (!modal) return;
-    setAcervoMovementModalState(modal, false);
-};
-
-window.openAcervoMovementByHash = (hash) => {
-    const modalId = (hash || '').replace(/^#/, '');
-    const modal = document.getElementById(modalId);
-    if (!modal) return false;
-    document.querySelectorAll('.movement-modal-target').forEach((candidate) => {
-        const shouldOpen = candidate.id === modalId;
-        setAcervoMovementModalState(candidate, shouldOpen);
-    });
-    modal.querySelector('input[name="solicitante"]')?.focus();
-    return true;
-};
-
-window.closeAcervoMovementByHash = () => {
-    document.querySelectorAll('.movement-modal-target').forEach((candidate) => setAcervoMovementModalState(candidate, false));
-    document.body.classList.remove('movement-modal-open');
-    return true;
-};
-
-if (window.location.hash.startsWith('#acervo-')) {
-    const card = document.getElementById(window.location.hash.slice(1));
-    if (card instanceof HTMLDetailsElement) {
-        card.open = true;
-        window.requestAnimationFrame(() => card.scrollIntoView({ block: 'center' }));
-    }
-}
-
-if (window.location.hash.startsWith('#movimento-')) {
-    window.openAcervoMovementByHash(window.location.hash);
-}
-
-document.querySelectorAll('[data-acervo-movement-link]').forEach((link) => {
-    link.addEventListener('click', (event) => {
-        event.preventDefault();
-        const target = link.getAttribute('href')?.replace(/^#/, '');
-        if (!target) return;
-        window.openAcervoMovementByHash('#' + target);
-        window.history.replaceState(null, '', '#' + target);
-    });
-});
-
-document.querySelectorAll('[data-acervo-movement-close]').forEach((link) => {
-    link.addEventListener('click', (event) => {
-        event.preventDefault();
-        window.closeAcervoMovementByHash();
-        const returnHash = link.getAttribute('href') || '';
-        if (returnHash) {
-            window.location.hash = returnHash;
-        }
-    });
-});
-
-document.querySelectorAll('[data-movement-open]').forEach((button) => {
-    button.addEventListener('click', () => {
-        const dialog = document.getElementById(button.dataset.movementOpen);
-        if (!dialog || typeof dialog.showModal !== 'function') return;
-        const movement = button.dataset.movement || '';
-        dialog.querySelector('input[name="movimento"]').value = movement;
-        dialog.querySelectorAll('[data-movement-title]').forEach((element) => {
-            element.textContent = movement === 'saida' ? 'Saída' : 'Retorno';
-        });
-        if (!dialog.open) dialog.showModal();
-    });
-});
-
-document.querySelectorAll('[data-movement-close]').forEach((button) => {
-    button.addEventListener('click', () => window.closeAcervoMovement(button));
-});
-
 const moreTrigger = document.querySelector('.more-trigger');
 const moreMenu = document.querySelector('.more-menu');
 const loginMore = document.querySelector('.login-more');
@@ -282,24 +187,6 @@ document.querySelectorAll('.temp-code-link').forEach((button) => {
         input.value = button.dataset.tempCode || '';
         input.focus();
     });
-});
-
-document.querySelectorAll('[data-result-edit-form]').forEach((form) => {
-    const toggle = form.querySelector('[data-result-edit-toggle]');
-    const editableFields = form.querySelectorAll('[data-result-editable]');
-    const editControls = form.querySelectorAll('[data-result-edit-control]');
-    const actionButtons = form.querySelectorAll('[data-result-action]');
-    if (!toggle) return;
-
-    const setEditing = (enabled) => {
-        form.classList.toggle('is-editing', enabled);
-        editableFields.forEach((field) => { field.readOnly = !enabled; });
-        editControls.forEach((control) => { control.disabled = !enabled; });
-        actionButtons.forEach((button) => { button.disabled = !enabled; });
-    };
-
-    toggle.addEventListener('change', () => setEditing(toggle.checked));
-    setEditing(toggle.checked);
 });
 
 document.querySelectorAll('.mapa-color-field input[type="color"]').forEach((input) => {

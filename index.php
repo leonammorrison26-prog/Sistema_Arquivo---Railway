@@ -334,12 +334,12 @@ function render_acervo_card(array $row, string $searchContext = ''): void
                 <?php endif; ?>
                 <div class="result-actions">
                     <?php if (!$isOutOfArchive && $canMove): ?>
-                        <a class="result-movement-link" href="#movimento-saida-<?= h($row['ID_UNICO'] ?? '') ?>" data-acervo-movement-link>&#128228; Sa&iacute;da</a>
+                        <a class="result-movement-link" href="#movimento-saida-<?= h($row['ID_UNICO'] ?? '') ?>" onclick="document.body.appendChild(document.getElementById(this.hash.slice(1)))">&#128228; Sa&iacute;da</a>
                     <?php else: ?>
                         <button type="button" disabled>&#128228; Sa&iacute;da</button>
                     <?php endif; ?>
                     <?php if ($isOutOfArchive && $canMove): ?>
-                        <a class="result-movement-link" href="#movimento-retorno-<?= h($row['ID_UNICO'] ?? '') ?>" data-acervo-movement-link>&#128229; Retorno</a>
+                        <a class="result-movement-link" href="#movimento-retorno-<?= h($row['ID_UNICO'] ?? '') ?>" onclick="document.body.appendChild(document.getElementById(this.hash.slice(1)))">&#128229; Retorno</a>
                     <?php else: ?>
                         <button type="button" disabled>&#128229; Retorno</button>
                     <?php endif; ?>
@@ -398,7 +398,7 @@ function render_acervo_movement_modal(array $row, string $movement): void
             <input type="hidden" name="return_page" value="<?= h(current_page()) ?>">
             <header class="movement-dialog-header">
                 <h3>📋 Registro de Movimentação</h3>
-                <a class="dialog-close" href="#acervo-<?= h($id) ?>" data-acervo-movement-close aria-label="Fechar">&times;</a>
+                <a class="dialog-close" href="#acervo-<?= h($id) ?>" aria-label="Fechar">&times;</a>
             </header>
             <p class="movement-action-copy">Você está registrando a <strong><?= h($label) ?></strong> do item:</p>
             <p class="movement-item-summary">📦 <strong>CX: <?= h($row['CAIXA'] ?? '---') ?> | <?= h($row['ASSUNTO'] ?? 'Sem assunto') ?></strong></p>
@@ -409,7 +409,7 @@ function render_acervo_movement_modal(array $row, string $movement): void
                 <label>Observações Adicionais <textarea name="observacao" rows="4"></textarea></label>
                 <div class="movement-dialog-actions">
                     <button class="primary" type="submit">✅ Confirmar Registro</button>
-                    <a href="#acervo-<?= h($id) ?>" data-acervo-movement-close>❌ Cancelar</a>
+                    <a href="#acervo-<?= h($id) ?>">❌ Cancelar</a>
                 </div>
             </section>
         </form>
