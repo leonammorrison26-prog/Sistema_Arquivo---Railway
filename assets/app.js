@@ -180,6 +180,75 @@ document.querySelectorAll('.password-toggle').forEach((passwordToggle) => {
     });
 });
 
+function openAcervoMovement(modal) {
+    if (!modal) return;
+
+    document.querySelectorAll('.movement-modal.is-open').forEach((openModal) => {
+        if (openModal === modal) return;
+        openModal.classList.remove('is-open');
+        openModal.hidden = true;
+    });
+
+    if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
+
+    modal.hidden = false;
+    modal.classList.add('is-open');
+    document.body.classList.add('movement-modal-open');
+
+    const focusTarget = modal.querySelector('input:not([type="hidden"]), textarea, button, a');
+    focusTarget?.focus({ preventScroll: true });
+}
+
+function closeAcervoMovement(source) {
+    const modal = source?.closest?.('.movement-modal') || document.querySelector('.movement-modal.is-open');
+    if (!modal) return;
+
+    modal.classList.remove('is-open');
+    modal.hidden = true;
+
+    if (!document.querySelector('.movement-modal.is-open')) {
+        document.body.classList.remove('movement-modal-open');
+    }
+}
+
+window.closeAcervoMovement = closeAcervoMovement;
+
+document.querySelectorAll('[data-movement-modal-trigger]').forEach((trigger) => {
+    trigger.addEventListener('click', (event) => {
+        const id = trigger.hash ? trigger.hash.slice(1) : '';
+        const modal = id ? document.getElementById(id) : null;
+        if (!modal) return;
+
+        event.preventDefault();
+        openAcervoMovement(modal);
+        history.replaceState(null, '', trigger.hash);
+    });
+});
+
+document.addEventListener('click', (event) => {
+    const closeLink = event.target.closest('.movement-modal .dialog-close, .movement-modal .movement-dialog-actions a[href^="#acervo-"]');
+    if (!closeLink) return;
+
+    event.preventDefault();
+    const targetHash = closeLink.getAttribute('href');
+    closeAcervoMovement(closeLink);
+
+    if (targetHash && targetHash.startsWith('#')) {
+        history.replaceState(null, '', targetHash);
+        document.getElementById(targetHash.slice(1))?.scrollIntoView({ block: 'nearest' });
+    }
+});
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeAcervoMovement();
+});
+
+if (window.location.hash?.startsWith('#movimento-')) {
+    openAcervoMovement(document.getElementById(window.location.hash.slice(1)));
+}
+
 document.querySelectorAll('.temp-code-link').forEach((button) => {
     button.addEventListener('click', () => {
         const input = button.closest('label')?.querySelector('input[name="TEMPORALIDADE"]');

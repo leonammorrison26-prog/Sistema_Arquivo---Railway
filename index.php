@@ -334,12 +334,12 @@ function render_acervo_card(array $row, string $searchContext = ''): void
                 <?php endif; ?>
                 <div class="result-actions">
                     <?php if (!$isOutOfArchive && $canMove): ?>
-                        <a class="result-movement-link" href="#movimento-saida-<?= h($row['ID_UNICO'] ?? '') ?>" onclick="document.body.appendChild(document.getElementById(this.hash.slice(1)))">&#128228; Sa&iacute;da</a>
+                        <a class="result-movement-link" href="#movimento-saida-<?= h($row['ID_UNICO'] ?? '') ?>" data-movement-modal-trigger>&#128228; Sa&iacute;da</a>
                     <?php else: ?>
                         <button type="button" disabled>&#128228; Sa&iacute;da</button>
                     <?php endif; ?>
                     <?php if ($isOutOfArchive && $canMove): ?>
-                        <a class="result-movement-link" href="#movimento-retorno-<?= h($row['ID_UNICO'] ?? '') ?>" onclick="document.body.appendChild(document.getElementById(this.hash.slice(1)))">&#128229; Retorno</a>
+                        <a class="result-movement-link" href="#movimento-retorno-<?= h($row['ID_UNICO'] ?? '') ?>" data-movement-modal-trigger>&#128229; Retorno</a>
                     <?php else: ?>
                         <button type="button" disabled>&#128229; Retorno</button>
                     <?php endif; ?>
@@ -389,7 +389,7 @@ function render_acervo_movement_modal(array $row, string $movement): void
     $modalId = 'movimento-' . $movement . '-' . $id;
     $label = $movement === 'saida' ? 'Saída' : 'Retorno';
     ?>
-    <div class="movement-modal movement-modal-target" id="<?= h($modalId) ?>">
+    <div class="movement-modal movement-modal-target" id="<?= h($modalId) ?>" hidden>
         <form method="post" class="movement-form movement-dialog" role="dialog" aria-modal="true">
             <input type="hidden" name="action" value="move_acervo">
             <input type="hidden" name="ID_UNICO" value="<?= h($id) ?>">
