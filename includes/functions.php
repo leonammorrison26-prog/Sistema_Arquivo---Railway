@@ -355,6 +355,17 @@ function temporalidade_index(): array
     return $index = is_array($decoded) ? $decoded : [];
 }
 
+function temporalidade_entry_by_code(string $code): ?array
+{
+    foreach (temporalidade_index() as $entry) {
+        if ((string) ($entry['code'] ?? '') === $code) {
+            return $entry;
+        }
+    }
+
+    return null;
+}
+
 function temporalidade_suggestion(array $row, string $context = ''): ?array
 {
     $query = normalize_search_text(implode(' ', [
@@ -369,10 +380,20 @@ function temporalidade_suggestion(array $row, string $context = ''): ?array
         return null;
     }
 
+    if (
+        str_contains($query, 'cebas')
+        && (str_contains($query, 'renovac') || str_contains($query, 'renovacao'))
+    ) {
+        $cebasEntry = temporalidade_entry_by_code('029.22');
+        if ($cebasEntry !== null) {
+            return $cebasEntry + ['score' => 50];
+        }
+    }
+
     $stopwords = array_flip([
         'a', 'ao', 'aos', 'as', 'da', 'das', 'de', 'do', 'dos', 'e', 'em', 'na', 'nas', 'no', 'nos',
         'o', 'os', 'ou', 'para', 'por', 'com', 'sem', 'um', 'uma', 'n', 'no', 'doc', 'docs',
-        'processo', 'processos', 'documento', 'documentos', 'renovacao', 'diario', 'diarios',
+        'processo', 'processos', 'documento', 'documentos', 'diario', 'diarios',
     ]);
     $tokens = array_values(array_filter(
         explode(' ', $query),
