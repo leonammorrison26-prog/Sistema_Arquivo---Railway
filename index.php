@@ -45,7 +45,7 @@ function render_busca(): void
 {
     $tabs = [
         'geral' => ['label' => 'Geral', 'icon' => 'search'],
-        'rh' => ['label' => 'RH / Prontuários', 'icon' => 'rh'],
+        'rh' => ['label' => 'CGRH', 'icon' => 'rh'],
         'caixas' => ['label' => 'Caixas', 'icon' => 'boxes'],
         'processos' => ['label' => 'Processos', 'icon' => 'processos'],
     ];
