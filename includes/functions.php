@@ -331,6 +331,14 @@ function normalize_text(string $value): string
 function normalize_search_text(string $value): string
 {
     $value = strtolower(trim($value));
+    $value = strtr($value, [
+        'á' => 'a', 'à' => 'a', 'â' => 'a', 'ã' => 'a', 'ä' => 'a',
+        'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e',
+        'í' => 'i', 'ì' => 'i', 'î' => 'i', 'ï' => 'i',
+        'ó' => 'o', 'ò' => 'o', 'ô' => 'o', 'õ' => 'o', 'ö' => 'o',
+        'ú' => 'u', 'ù' => 'u', 'û' => 'u', 'ü' => 'u',
+        'ç' => 'c', 'ñ' => 'n',
+    ]);
     $converted = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
     if ($converted !== false) {
         $value = $converted;
@@ -355,39 +363,15 @@ function temporalidade_index(): array
     return $index = is_array($decoded) ? $decoded : [];
 }
 
-function temporalidade_entry_by_code(string $code): ?array
-{
-    foreach (temporalidade_index() as $entry) {
-        if ((string) ($entry['code'] ?? '') === $code) {
-            return $entry;
-        }
-    }
-
-    return null;
-}
-
 function temporalidade_suggestion(array $row, string $context = ''): ?array
 {
     $query = normalize_search_text(implode(' ', [
-        $context,
         $row['ASSUNTO'] ?? '',
-        $row['INTERESSADO'] ?? '',
         $row['OBSERVACAO'] ?? '',
-        $row['PROCESSO'] ?? '',
     ]));
 
     if ($query === '') {
         return null;
-    }
-
-    if (
-        str_contains($query, 'cebas')
-        && (str_contains($query, 'renovac') || str_contains($query, 'renovacao'))
-    ) {
-        $cebasEntry = temporalidade_entry_by_code('029.22');
-        if ($cebasEntry !== null) {
-            return $cebasEntry + ['score' => 50];
-        }
     }
 
     $stopwords = array_flip([
