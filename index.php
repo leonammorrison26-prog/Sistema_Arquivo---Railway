@@ -71,7 +71,9 @@ function render_busca(): void
             ? search_acervo_filtered($filterInput)
             : search_acervo($term, $scope))
         : [];
-    render_sei_home_widget();
+    if (!$hasFilters) {
+        render_sei_home_widget();
+    }
     ?>
     <section class="panel">
         <nav class="tabs">
@@ -263,11 +265,16 @@ function render_sei_queue_widget(): void
 function render_acervo_card(array $row, string $searchContext = ''): void
 {
     $status = trim((string) ($row['STATUS_EMPRESTIMO'] ?? ''));
-    $displayStatus = $status === '' || $status === '---' ? 'DISPONIVEL' : $status;
-    $tipoDoc = trim((string) ($row['PROCESSO'] ?? '')) !== '' && ($row['PROCESSO'] ?? '') !== '---' ? 'PROCESSOS' : 'DOCUMENTOS';
+    $isOutOfArchive = $status === 'EMPRESTADO';
+    $displayStatus = $isOutOfArchive ? 'EMPRESTADO' : 'DISPONIVEL';
+    $canMove = user_can_move_acervo();
+    $tipoDoc = trim((string) ($row['OBSERVACAO'] ?? ''));
+    if ($tipoDoc === '') {
+        $tipoDoc = '---';
+    }
     $tempSuggestion = temporalidade_suggestion($row, $searchContext);
     ?>
-    <details class="result-card">
+    <details class="result-card" id="acervo-<?= h($row['ID_UNICO'] ?? '') ?>">
         <summary class="result-summary">
             <span class="result-chevron">â€º</span>
             <span class="result-box-icon" aria-hidden="true">ðŸ“¦</span>
@@ -275,33 +282,37 @@ function render_acervo_card(array $row, string $searchContext = ''): void
             <span class="result-doc-icon" aria-hidden="true">ðŸ“„</span>
             <span class="result-subject"><?= h($row['ASSUNTO'] ?? '---') ?></span>
             <span class="result-divider">|</span>
-            <em class="result-status"><?= h($displayStatus) ?></em>
+            <em class="result-status <?= $isOutOfArchive ? 'is-out-of-archive' : '' ?>"><?= h($displayStatus) ?></em>
         </summary>
-        <form method="post" class="result-detail-form">
+        <form method="post" class="result-detail-form" data-result-edit-form>
             <input type="hidden" name="action" value="save_acervo">
             <input type="hidden" name="return_page" value="<?= h(current_page()) ?>">
+            <input type="hidden" name="return_url" value="<?= h(($_SERVER['REQUEST_URI'] ?? '/?page=busca') . '#acervo-' . ($row['ID_UNICO'] ?? '')) ?>">
             <input type="hidden" name="ID_UNICO" value="<?= h($row['ID_UNICO'] ?? '') ?>">
             <input type="hidden" name="STATUS_EMPRESTIMO" value="<?= h($status) ?>">
-            <input type="hidden" name="OBSERVACAO" value="<?= h($row['OBSERVACAO'] ?? '---') ?>">
 
-            <span class="result-toggle-switch" aria-hidden="true"></span>
+            <label class="result-edit-toggle">
+                <input type="checkbox" data-result-edit-toggle aria-label="Habilitar alterações neste resultado">
+                <span class="result-toggle-switch" aria-hidden="true"></span>
+                <span>Habilitar alterações</span>
+            </label>
 
             <div class="result-field-grid">
-                <label>Unidades <input name="UNIDADE" value="<?= h($row['UNIDADE'] ?? '---') ?>"></label>
-                <label>N&ordm; Processos <input name="PROCESSO" value="<?= h($row['PROCESSO'] ?? '---') ?>"></label>
-                <label>N&ordm; Caixas <input name="CAIXA" value="<?= h($row['CAIXA'] ?? '---') ?>"></label>
-                <label>Localiza&ccedil;&atilde;o <input name="LOCALIZACAO" value="<?= h($row['LOCALIZACAO'] ?? '---') ?>"></label>
-                <label>Volumes <input name="VOLUMES" value="<?= h($row['VOLUMES'] ?? '---') ?>"></label>
-                <label>Tipo de Doc <input value="<?= h($tipoDoc) ?>" readonly></label>
-                <label>Interessados <input name="INTERESSADO" value="<?= h($row['INTERESSADO'] ?? '---') ?>"></label>
-                <label>Assuntos <input name="ASSUNTO" value="<?= h($row['ASSUNTO'] ?? '---') ?>"></label>
+                <label>Unidades <input name="UNIDADE" data-result-editable value="<?= h($row['UNIDADE'] ?? '---') ?>"></label>
+                <label>N&ordm; Processos <input name="PROCESSO" data-result-editable value="<?= h($row['PROCESSO'] ?? '---') ?>"></label>
+                <label>N&ordm; Caixas <input name="CAIXA" data-result-editable value="<?= h($row['CAIXA'] ?? '---') ?>"></label>
+                <label>Localiza&ccedil;&atilde;o <input name="LOCALIZACAO" data-result-editable value="<?= h($row['LOCALIZACAO'] ?? '---') ?>"></label>
+                <label>Volumes <input name="VOLUMES" data-result-editable value="<?= h($row['VOLUMES'] ?? '---') ?>"></label>
+                <label>Tipo de Doc <input name="OBSERVACAO" data-result-editable value="<?= h($tipoDoc) ?>"></label>
+                <label>Interessados <input name="INTERESSADO" data-result-editable value="<?= h($row['INTERESSADO'] ?? '---') ?>"></label>
+                <label>Assuntos <input name="ASSUNTO" data-result-editable value="<?= h($row['ASSUNTO'] ?? '---') ?>"></label>
                 <label>Respons&aacute;vel <input value="<?= h($row['RESPONSAVEL'] ?? '---') ?>" readonly></label>
                 <label>N&ordm; Cod Temp
-                    <input name="TEMPORALIDADE" value="<?= h($row['TEMPORALIDADE'] ?? '---') ?>">
+                    <input name="TEMPORALIDADE" data-result-editable value="<?= h($row['TEMPORALIDADE'] ?? '---') ?>">
                     <?php if ($tempSuggestion): ?>
                         <span class="temp-hint">
                             Sugest&atilde;o:
-                            <button type="button" class="temp-code-link" data-temp-code="<?= h($tempSuggestion['code'] ?? '') ?>">
+                            <button type="button" class="temp-code-link" data-result-edit-control data-temp-code="<?= h($tempSuggestion['code'] ?? '') ?>">
                                 <?= h($tempSuggestion['code'] ?? '') ?>
                             </button>
                             <?= h($tempSuggestion['title'] ?? '') ?>
@@ -311,23 +322,98 @@ function render_acervo_card(array $row, string $searchContext = ''): void
                         <span class="temp-hint temp-hint-empty">Sem sugest&atilde;o na tabela do MDS</span>
                     <?php endif; ?>
                 </label>
-                <label>Data <input name="DATA" value="<?= h($row['DATA'] ?? '---') ?>"></label>
-                <label>Data Limite <input name="DATA_LIMITE" value="<?= h($row['DATA_LIMITE'] ?? '---') ?>"></label>
+                <label>Data <input name="DATA" data-result-editable value="<?= h($row['DATA'] ?? '---') ?>"></label>
+                <label>Data Limite <input name="DATA_LIMITE" data-result-editable value="<?= h($row['DATA_LIMITE'] ?? '---') ?>"></label>
             </div>
 
             <div class="result-footer">
-                <label class="withdrawn-field">Quem Retirou
-                    <input name="QUEM_RETIROU" value="<?= h($row['QUEM_RETIROU'] ?? '---') ?>">
-                </label>
+                <?php if ($isOutOfArchive): ?>
+                    <label class="withdrawn-field">Quem Retirou
+                        <input name="QUEM_RETIROU" value="<?= h($row['QUEM_RETIROU'] ?? '---') ?>" readonly>
+                    </label>
+                <?php endif; ?>
                 <div class="result-actions">
-                    <button type="submit" name="STATUS_EMPRESTIMO" value="EMPRESTADO">&#128228; Sa&iacute;da</button>
-                    <button type="submit" name="STATUS_EMPRESTIMO" value="---">&#128229; Retorno</button>
-                    <button class="save-result" type="submit">&#10003; Salvar Altera&ccedil;&otilde;es</button>
+                    <?php if (!$isOutOfArchive && $canMove): ?>
+                        <a class="result-movement-link" href="#movimento-saida-<?= h($row['ID_UNICO'] ?? '') ?>" data-acervo-movement-link>&#128228; Sa&iacute;da</a>
+                    <?php else: ?>
+                        <button type="button" disabled>&#128228; Sa&iacute;da</button>
+                    <?php endif; ?>
+                    <?php if ($isOutOfArchive && $canMove): ?>
+                        <a class="result-movement-link" href="#movimento-retorno-<?= h($row['ID_UNICO'] ?? '') ?>" data-acervo-movement-link>&#128229; Retorno</a>
+                    <?php else: ?>
+                        <button type="button" disabled>&#128229; Retorno</button>
+                    <?php endif; ?>
+                    <button class="save-result" type="submit" data-result-action>&#10003; Salvar Altera&ccedil;&otilde;es</button>
+                    <details class="result-history">
+                        <summary>🕒 Histórico</summary>
+                        <p>Modificado por: <strong><?= h($row['ALTERADO_POR'] ?? '---') ?></strong><br>Em: <?= h($row['ULTIMA_ALTERACAO'] ?? '---') ?></p>
+                    </details>
                 </div>
                 <span class="result-modified">Modificado por: <?= h($row['ALTERADO_POR'] ?? '---') ?> em <?= h($row['ULTIMA_ALTERACAO'] ?? '---') ?></span>
             </div>
         </form>
+        <div class="movement-modal" id="movimento-<?= h($row['ID_UNICO'] ?? '') ?>" hidden>
+            <form method="post" class="movement-form movement-dialog" role="dialog" aria-modal="true">
+                <input type="hidden" name="action" value="move_acervo">
+                <input type="hidden" name="ID_UNICO" value="<?= h($row['ID_UNICO'] ?? '') ?>">
+                <input type="hidden" name="movimento" value="">
+                <input type="hidden" name="return_url" value="<?= h(($_SERVER['REQUEST_URI'] ?? '/?page=busca') . '#acervo-' . ($row['ID_UNICO'] ?? '')) ?>">
+                <input type="hidden" name="return_page" value="<?= h(current_page()) ?>">
+                <header class="movement-dialog-header">
+                    <h3>📋 Registro de Movimentação</h3>
+                    <button type="button" class="dialog-close" onclick="closeAcervoMovement(this)" aria-label="Fechar">&times;</button>
+                </header>
+                <p class="movement-action-copy">Você está registrando a <strong data-movement-title>Saída</strong> do item:</p>
+                <p class="movement-item-summary">📦 <strong>CX: <?= h($row['CAIXA'] ?? '---') ?> | <?= h($row['ASSUNTO'] ?? 'Sem assunto') ?></strong></p>
+                <section class="movement-fields">
+                    <label>Solicitante / Interessado <input name="solicitante" required placeholder="Quem está retirando/devolvendo?"></label>
+                    <label>Setor / Unidade <input name="setor" required placeholder="Ex: CGPRO / SAA"></label>
+                    <label>Data da Ação <input type="date" name="data_movimento" value="<?= date('Y-m-d') ?>" required></label>
+                    <label>Observações Adicionais <textarea name="observacao" rows="4"></textarea></label>
+                    <div class="movement-dialog-actions">
+                        <button class="primary" type="submit">✅ Confirmar Registro</button>
+                        <button type="button" onclick="closeAcervoMovement(this)">❌ Cancelar</button>
+                    </div>
+                </section>
+            </form>
+        </div>
+        <?php render_acervo_movement_modal($row, 'saida'); ?>
+        <?php render_acervo_movement_modal($row, 'retorno'); ?>
     </details>
+    <?php
+}
+
+function render_acervo_movement_modal(array $row, string $movement): void
+{
+    $id = (string) ($row['ID_UNICO'] ?? '');
+    $modalId = 'movimento-' . $movement . '-' . $id;
+    $label = $movement === 'saida' ? 'Saída' : 'Retorno';
+    ?>
+    <div class="movement-modal movement-modal-target" id="<?= h($modalId) ?>">
+        <form method="post" class="movement-form movement-dialog" role="dialog" aria-modal="true">
+            <input type="hidden" name="action" value="move_acervo">
+            <input type="hidden" name="ID_UNICO" value="<?= h($id) ?>">
+            <input type="hidden" name="movimento" value="<?= h($movement) ?>">
+            <input type="hidden" name="return_url" value="<?= h(($_SERVER['REQUEST_URI'] ?? '/?page=busca') . '#acervo-' . $id) ?>">
+            <input type="hidden" name="return_page" value="<?= h(current_page()) ?>">
+            <header class="movement-dialog-header">
+                <h3>📋 Registro de Movimentação</h3>
+                <a class="dialog-close" href="#acervo-<?= h($id) ?>" data-acervo-movement-close aria-label="Fechar">&times;</a>
+            </header>
+            <p class="movement-action-copy">Você está registrando a <strong><?= h($label) ?></strong> do item:</p>
+            <p class="movement-item-summary">📦 <strong>CX: <?= h($row['CAIXA'] ?? '---') ?> | <?= h($row['ASSUNTO'] ?? 'Sem assunto') ?></strong></p>
+            <section class="movement-fields">
+                <label>Solicitante / Interessado <input name="solicitante" required placeholder="Quem está retirando/devolvendo?"></label>
+                <label>Setor / Unidade <input name="setor" required placeholder="Ex: CGPRO / SAA"></label>
+                <label>Data da Ação <input type="date" name="data_movimento" value="<?= date('Y-m-d') ?>" required></label>
+                <label>Observações Adicionais <textarea name="observacao" rows="4"></textarea></label>
+                <div class="movement-dialog-actions">
+                    <button class="primary" type="submit">✅ Confirmar Registro</button>
+                    <a href="#acervo-<?= h($id) ?>" data-acervo-movement-close>❌ Cancelar</a>
+                </div>
+            </section>
+        </form>
+    </div>
     <?php
 }
 
