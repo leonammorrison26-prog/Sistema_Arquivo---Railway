@@ -1,3 +1,7 @@
 [diarq] silent sync started reason=login
 [diarq] silent sync started reason=login
 [diarq] silent sync failed: SQLSTATE[HY000]: General error: 5 database is locked
+[diarq] silent sync started reason=login
+[diarq] silent sync failed: SQLSTATE[HY000]: General error: 5 database is locked
+[diarq] silent sync started reason=manual
+[diarq] silent sync failed: SQLSTATE[HY000]: General error: 5 database is locked
